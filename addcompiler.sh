@@ -1,0 +1,1 @@
+export PATH=$PATH:"/home/yangliangquan/tools/compiler/MRS_Toolchain_Linux_x64_V230/Toolchain/RISC-V-Embedded-GCC12/bin/"
