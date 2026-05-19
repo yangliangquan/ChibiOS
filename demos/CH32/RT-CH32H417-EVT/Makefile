@@ -122,7 +122,7 @@ LDSCRIPT= $(STARTUPLD)/Link_v3f.ld
 # setting.
 CSRC = $(ALLCSRC) \
        $(TESTSRC) \
-       main.c
+       main.c usbcfg.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.

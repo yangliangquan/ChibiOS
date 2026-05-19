@@ -51,6 +51,12 @@
  */
 #define USB_SET_ADDRESS_ACK_HANDLING        USB_SET_ADDRESS_ACK_SW
 
+/**
+ * @brief   Pointer to the USB registers block.
+ */
+#define CH32_USB_DEVICE                           ((USBHSD_TypeDef *) USBHSD_BASE)
+#define CH32_USB_HOST                             ((USBHSH_TypeDef *) USBHSH_BASE)
+
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
 /*===========================================================================*/
@@ -65,7 +71,7 @@
  * @note    The default is @p FALSE.
  */
 #if !defined(CH32_USB_USE_USB1) || defined(__DOXYGEN__)
-#define CH32_USB_USE_USB1                  FALSE
+#define CH32_USB_USE_USB1                  TRUE
 #endif
 /** @} */
 
@@ -100,6 +106,7 @@ typedef struct {
   thread_reference_t            thread;
 #endif
     /* End of the mandatory fields.*/
+  size_t                        txlast;
 } USBInEndpointState;
 
 /**
@@ -125,6 +132,7 @@ typedef struct {
   thread_reference_t            thread;
 #endif
   /* End of the mandatory fields.*/
+  uint32_t                      rxpkts;
 } USBOutEndpointState;
 
 /**
@@ -318,7 +326,8 @@ struct USBDriver {
 /*===========================================================================*/
 /* Driver macros.                                                            */
 /*===========================================================================*/
-
+#include "ch32h417.h"
+#include "ch32_usb.h"
 /**
  * @brief   Returns the current frame number.
  *
@@ -327,7 +336,7 @@ struct USBDriver {
  *
  * @notapi
  */
-#define usb_lld_get_frame_number(usbp) 0
+#define usb_lld_get_frame_number(usbp) (CH32_USB_DEVICE->FRAME_NO & 0x7FF)
 
 /**
  * @brief   Returns the exact size of a receive transaction.
@@ -351,21 +360,21 @@ struct USBDriver {
  *
  * @api
  */
-#define usb_lld_connect_bus(usbp)
+#define usb_lld_connect_bus(usbp) do{CH32_USB_DEVICE->CONTROL |= USBHS_UD_DEV_EN;} while(false)
 
 /**
  * @brief   Disconnect the USB device.
  *
  * @api
  */
-#define usb_lld_disconnect_bus(usbp)
+#define usb_lld_disconnect_bus(usbp) do{CH32_USB_DEVICE->CONTROL &= ~USBHS_UD_DEV_EN;} while(false)
 
 /**
  * @brief   Start of host wake-up procedure.
  *
  * @notapi
  */
-#define usb_lld_wakeup_host(usbp)
+#define usb_lld_wakeup_host(usbp) do{CH32_USB_DEVICE->WAKE_CTRL |= USBHS_UD_REMOTE_WKUP;} while(false)
 
 /*===========================================================================*/
 /* External declarations.                                                    */

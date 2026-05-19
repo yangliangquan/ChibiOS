@@ -16,58 +16,72 @@
 
 #include "ch.h"
 #include "hal.h"
+#include "usbcfg.h"
 
 /*
  * This is a periodic thread that does absolutely nothing except flashing
  * a LED.
  */
 static THD_WORKING_AREA(waThread1, 1024);
-static THD_FUNCTION(Thread1, arg) {
+static THD_FUNCTION(Thread1, arg)
+{
 
-  (void)arg;
-  chRegSetThreadName("blinker");
-  
-  while (true) {
-    chThdSleepMilliseconds(500);
-  }
+    (void)arg;
+    chRegSetThreadName("blinker");
+    palSetPadMode(GPIOD, GPIO_PIN4, PAL_MODE_OUTPUT_PUSHPULL);
+    while (true)
+    {
+
+        palSetPad(GPIOD, GPIO_PIN4); /* Orange.  */
+        chThdSleepMilliseconds(500/2);
+        palClearPad(GPIOD, GPIO_PIN4); /* Orange.  */
+        chThdSleepMilliseconds(500/2);
+    }
 }
 /*
  * Application entry point.
  */
-int main(void) {
+int main(void)
+{
 
-  /*
-   * System initializations.
-   * - HAL initialization, this also initializes the configured device drivers
-   *   and performs the board-specific initializations.
-   * - Kernel initialization, the main() function becomes a thread and the
-   *   RTOS is active.
-   */
-  halInit();
-  chSysInit();
+    /*
+     * System initializations.
+     * - HAL initialization, this also initializes the configured device drivers
+     *   and performs the board-specific initializations.
+     * - Kernel initialization, the main() function becomes a thread and the
+     *   RTOS is active.
+     */
+    halInit();
+    chSysInit();
 
-  /*
-   * Activates the serial driver 2 using the driver default configuration.
-   * PA2(TX) and PA3(RX) are routed to USART2.
-   */
-  // sdStart(&SD2, NULL);
-  // palSetPadMode(GPIOA, 2, PAL_MODE_ALTERNATE(7));
-  // palSetPadMode(GPIOA, 3, PAL_MODE_ALTERNATE(7));
+    /*
+     * Initializes a serial-over-USB CDC driver.
+     */
+    sduObjectInit(&SDU1);
+    sduStart(&SDU1, &serusbcfg);
 
-  /*
-   * Creates the example thread.
-   */
-  chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
-  palSetPadMode(GPIOD,GPIO_PIN4, PAL_MODE_OUTPUT_PUSHPULL);
+    /*
+     * Activates the USB driver and then the USB bus pull-up on D+.
+     * Note, a delay is inserted in order to not have to disconnect the cable
+     * after a reset.
+     */
+    usbDisconnectBus(serusbcfg.usbp);
+    chThdSleepMilliseconds(1500);
+    usbStart(serusbcfg.usbp, &usbcfg);
+    usbConnectBus(serusbcfg.usbp);
 
-  /*
-   * Normal main() thread activity, in this demo it does nothing except
-   * sleeping in a loop and check the button state.
-   */
-  while (true) {
-    palSetPad(GPIOD, GPIO_PIN4);       /* Orange.  */
-    chThdSleepMilliseconds(500);
-    palClearPad(GPIOD, GPIO_PIN4);     /* Orange.  */
-    chThdSleepMilliseconds(500);
-  }
+    /*
+     * Creates the example thread.
+     */
+    chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
+
+    /*
+     * Normal main() thread activity, in this demo it does nothing except
+     * sleeping in a loop and check the button state.
+     */
+    while (true)
+    {
+        chnWrite(&SDU1, (const uint8_t *)"Hello World!\r\n", 14);
+        chThdSleepMilliseconds(500);
+    }
 }

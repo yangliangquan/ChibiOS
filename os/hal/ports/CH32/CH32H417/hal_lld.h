@@ -96,7 +96,7 @@ typedef struct {
 /*===========================================================================*/
 #define resetHB1(x) do{RCC->HB1PRSTR |= x; RCC->HB1PRSTR &= ~x;(void)RCC->HB1PRSTR;}while(0)
 #define resetHB2(x) do{RCC->HB2PRSTR |= x; RCC->HB2PRSTR &= ~x;(void)RCC->HB2PRSTR;}while(0)
-#define resetHB(x) do{RCC->HBPRSTR |= x; RCC->HBPRSTR &= ~x;(void)RCC->HBPRSTR;}while(0)
+#define resetHB(x) do{RCC->HBRSTR |= x; RCC->HBRSTR &= ~x;(void)RCC->HBRSTR;}while(0)
 
 #define enableHB1(x) do{RCC->HB1PCENR |= x;}while(0)
 #define enableHB2(x) do{RCC->HB2PCENR |= x;}while(0)

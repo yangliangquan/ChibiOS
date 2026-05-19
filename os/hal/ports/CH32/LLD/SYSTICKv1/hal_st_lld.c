@@ -31,7 +31,7 @@
 /*===========================================================================*/
 #if OSAL_ST_MODE == OSAL_ST_MODE_FREERUNNING
 
-#define CH32_TIMCLK hal_lld_get_clock_point(NULL)
+#define CH32_TIMCLK hal_lld_get_clock_point((halclkpt_t)NULL)
 
 
 #if (OSAL_ST_RESOLUTION != 16) && (OSAL_ST_RESOLUTION != 32)
@@ -253,6 +253,7 @@ void __set_DEBUG_CR(uint32_t value)
 /*===========================================================================*/
 /* Driver interrupt handlers.                                                */
 /*===========================================================================*/
+void st_lld_serve_interrupt(void);
 OSAL_IRQ_HANDLER(ST_HANDLER) {
   st_lld_serve_interrupt();
 }
@@ -291,7 +292,7 @@ void st_lld_init(void) {
     SysTick0->ISR &= ~(1 << 0);
 
     SysTick0->CNT = 0;
-    SysTick0->CMP = hal_lld_get_clock_point(NULL) / OSAL_ST_FREQUENCY - 1;
+    SysTick0->CMP = CH32_TIMCLK / OSAL_ST_FREQUENCY - 1;
     SysTick0->CTLR = (1 << 2) | (1 << 1) | (1 << 3);
     SysTick0->CTLR |= (1 << 0);
     NVIC_EnableIRQ( ST_NUMBER );
