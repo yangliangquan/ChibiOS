@@ -62,7 +62,7 @@
                                            "t0"                                                                        \
                  :);
 
-#define STORE_SP(reg, offset) asm volatile("sw sp, %0(" __CH_STRINGIFY(reg) ")" ::"i"(offset) :)
+#define STORE_SP(reg, offset) asm volatile("sw sp, %0(" __CH_STRINGIFY(reg) ")" ::"i"(offset) : "memory")
 #define LOAD_SP(reg, offset) asm volatile("lw sp, %0(" __CH_STRINGIFY(reg) ")" ::"i"(offset) :)
 
 #define RELOAD_SP(offset)                                                                                              \
@@ -84,7 +84,7 @@
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
-__attribute__((always_inline)) inline void save_context(void)
+__attribute__((always_inline)) static inline void save_context(void)
 {
     RELOAD_SP(-sizeof(struct port_intctx));
     STORE_REGISTER(1, offsetof(struct port_intctx, x1));
@@ -153,7 +153,7 @@ __attribute__((always_inline)) inline void save_context(void)
     STORE_CSR(mepc, offsetof(struct port_intctx, mepc));
 }
 
-__attribute__((always_inline)) inline void recover_context(void)
+__attribute__((always_inline)) static inline void recover_context(void)
 {
     LOAD_REGISTER(1, offsetof(struct port_intctx, x1));
     LOAD_REGISTER(5, offsetof(struct port_intctx, x5));
@@ -222,7 +222,7 @@ __attribute__((always_inline)) inline void recover_context(void)
     RELOAD_SP(sizeof(struct port_intctx));
 }
 
-__attribute__((always_inline)) inline void save_context_irq(void)
+__attribute__((always_inline)) static inline void save_context_irq(void)
 {
     RELOAD_SP(-sizeof(struct port_extctx));
     STORE_REGISTER(1, offsetof(struct port_extctx, x1));
@@ -289,7 +289,7 @@ __attribute__((always_inline)) inline void save_context_irq(void)
 #endif
 }
 
-__attribute__((always_inline)) inline void recover_context_irq(void)
+__attribute__((always_inline)) static inline void recover_context_irq(void)
 {
     LOAD_REGISTER(1, offsetof(struct port_extctx, x1));
     LOAD_REGISTER(5, offsetof(struct port_extctx, x5));
@@ -457,7 +457,7 @@ __attribute__((naked)) void _port_thread_start()
     asm volatile("jalr ra, x8");
     asm volatile("li a0, 0");
     asm volatile("jal ra, chThdExit");
-    asm volatile("zombie: j zombie");
+    asm volatile("1: j 1b");
 }
 
 /** @} */

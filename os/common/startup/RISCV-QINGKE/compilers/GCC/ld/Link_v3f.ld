@@ -7,12 +7,14 @@ PROVIDE( _stack_size = __stack_size );
 
 MEMORY
 {
+
+
 	/*FLASH, RAM, and RAM-CODE can be freely configured according to project 
 	requirements;Please refer to the datasheet manual for specific allocation*/
-	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 64K             /* zero_wait flah ,and loaded into RAM_CODE for running */
-	RAM_CODE (xrw) : ORIGIN = 0x20100000, LENGTH = 64K         /* RAM for running code*/
-	RAM (xrw) : ORIGIN = (0x20110000+1024), LENGTH = (448K-1024) /* RAM for .data .bss section and other*/
-	RAM_LOAD (xrw) : ORIGIN = 0x20110000, LENGTH = 1024         /* RAM for .load section*/
+	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 128K             /* zero_wait flah ,and loaded into RAM_CODE for running */
+	RAM_CODE (xrw) : ORIGIN = 0x20100000, LENGTH = 128K         /* RAM for running code*/
+	RAM (xrw) : ORIGIN = (0x20120000+1024), LENGTH = (448K-1024-64K) /* RAM for .data .bss section and other*/
+	RAM_LOAD (xrw) : ORIGIN = 0x20120000, LENGTH = 1024         /* RAM for .load section*/
 }
 
 SECTIONS
@@ -56,10 +58,14 @@ SECTIONS
 		. = ALIGN(4);
 		PROVIDE(vector_start = .);
         KEEP(*(.vector))
+		PROVIDE(__text_base__ = .);
 		*(.text)
 		*(.text.*)
+		PROVIDE(__text_end__ = .);
+		PROVIDE(__rodata_base__ = .);
 		*(.rodata)
 		*(.rodata*)
+		PROVIDE(__rodata_end__ = .);
         *(.sdata2.*)
 		*(.glue_7)
 		*(.glue_7t)
@@ -161,7 +167,9 @@ SECTIONS
 	{
 		. = ALIGN(4);
     	*(.gnu.linkonce.r.*)
+		PROVIDE(__data_base__ = .);
     	*(.data .data.*)
+		PROVIDE(__data_end__ = .);
     	*(.gnu.linkonce.d.*)
 		. = ALIGN(8);
     	PROVIDE( __global_pointer$ = . + 0x800 );
@@ -184,7 +192,9 @@ SECTIONS
 		PROVIDE( _sbss = .);
   	    *(.sbss*)
         *(.gnu.linkonce.sb.*)
+		PROVIDE(__bss_base__ = .);
 		*(.bss*)
+		PROVIDE(__bss_end__ = .);
      	*(.gnu.linkonce.b.*)		
 		*(COMMON*)
 		. = ALIGN(4);

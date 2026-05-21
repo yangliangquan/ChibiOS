@@ -52,7 +52,7 @@ static THD_FUNCTION(ADCThread, arg){
     
     while(true){
         adcConvert(&ADCD1, &adcgrpcfg, sample_buffer, 8);
-        chprintf((BaseSequentialStream *)&SDU1, "%s: ADC: %u %u\r\n", chRegGetThreadNameX(chThdGetSelfX()), sample_buffer[0], sample_buffer[1]);
+        // chprintf((BaseSequentialStream *)&SDU1, "%s: ADC: %u %u\r\n", chRegGetThreadNameX(chThdGetSelfX()), sample_buffer[0], sample_buffer[1]);
         chThdSleepMilliseconds(1000);
     }
 }
@@ -76,6 +76,26 @@ static THD_FUNCTION(Thread1, arg)
         chThdSleepMilliseconds(500/2);
     }
 }
+
+#include "shell.h"
+
+static void cmd_test(BaseSequentialStream *chp, int argc, char *argv[]) {
+  (void)argc;
+  (void)argv;
+  chprintf(chp, "Hello from ChibiOS Shell!\r\n");
+}
+
+static const ShellCommand commands[] = {
+  {"test", cmd_test},  
+  {NULL, NULL}         
+};
+
+static const ShellConfig shell_cfg = {
+  (BaseSequentialStream *)&SDU1, 
+  commands                      
+};
+
+#define SHELL_WA_SIZE THD_WORKING_AREA_SIZE(1024)
 
 /*
  * Application entry point.
@@ -121,7 +141,12 @@ int main(void)
      */
     while (true)
     {
-        chprintf((BaseSequentialStream *)&SDU1, "%s: Hello\r\n", chRegGetThreadNameX(chThdGetSelfX()));
-        chThdSleepMilliseconds(5000);
+        if (SDU1.config->usbp->state == USB_ACTIVE)
+        {
+            thread_t *shelltp =
+                chThdCreateFromHeap(NULL, SHELL_WA_SIZE, "shell", NORMALPRIO + 1, shellThread, (void *)&shell_cfg);
+            chThdWait(shelltp); /* Waiting termination.             */
+        }
+        chThdSleepMilliseconds(500);
     }
 }
