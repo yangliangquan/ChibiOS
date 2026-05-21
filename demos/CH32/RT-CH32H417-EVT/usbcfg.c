@@ -30,12 +30,12 @@ SerialUSBDriver SDU1;
  * USB Device Descriptor.
  */
 static const uint8_t vcom_device_descriptor_data[18] = {
-  USB_DESC_DEVICE       (0x0110,        /* bcdUSB (1.1).                    */
+  USB_DESC_DEVICE       (0x0200,        /* bcdUSB (1.1).                    */
                          0x02,          /* bDeviceClass (CDC).              */
                          0x00,          /* bDeviceSubClass.                 */
                          0x00,          /* bDeviceProtocol.                 */
                          0x40,          /* bMaxPacketSize.                  */
-                         0x0483,        /* idVendor (ST).                   */
+                         0x1A86,        /* idVendor (WCH).                   */
                          0x5740,        /* idProduct.                       */
                          0x0200,        /* bcdDevice.                       */
                          1,             /* iManufacturer.                   */
@@ -150,11 +150,29 @@ static const uint8_t vcom_string0[] = {
  * Vendor string.
  */
 static const uint8_t vcom_string1[] = {
-  USB_DESC_BYTE(38),                    /* bLength.                         */
+  USB_DESC_BYTE(44),                    /* bLength.                         */
   USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
-  'S', 0, 'T', 0, 'M', 0, 'i', 0, 'c', 0, 'r', 0, 'o', 0, 'e', 0,
-  'l', 0, 'e', 0, 'c', 0, 't', 0, 'r', 0, 'o', 0, 'n', 0, 'i', 0,
-  'c', 0, 's', 0
+  'W',0,
+  'C',0,
+  'H',0,
+  ' ',0,
+  'M',0,
+  'i',0,
+  'c',0,
+  'o',0,
+  'r',0,
+  'o',0,
+  'e',0,
+  'l',0,
+  'e',0,
+  'c',0,
+  't',0,
+  'r',0,
+  'o',0,
+  'n',0,
+  'i',0,
+  'c',0,
+  's',0
 };
 
 /*
@@ -235,8 +253,6 @@ static const USBEndpointConfig ep1config = {
   0x0040,
   &ep1instate,
   &ep1outstate,
-  2,
-  NULL
 };
 
 /**
@@ -256,8 +272,6 @@ static const USBEndpointConfig ep2config = {
   0x0000,
   &ep2instate,
   NULL,
-  1,
-  NULL
 };
 
 /*

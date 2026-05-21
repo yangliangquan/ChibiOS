@@ -64,7 +64,7 @@ static union {
 /**
  * @brief   Buffer for the EP0 setup packets.
  */
-static volatile uint8_t ep0setup_buffer[64];
+static uint8_t ep0setup_buffer[64];
 
 /**
  * @brief   EP0 initialization structure.
@@ -83,7 +83,7 @@ static const USBEndpointConfig ep0config = {
 /*===========================================================================*/
 /* Driver local variables and types.                                         */
 /*===========================================================================*/
-static uint32_t maxPacketSizeList[] = {DEF_USB_EP0_HS_SIZE, DEF_USB_EP1_HS_SIZE, DEF_USB_EP2_HS_SIZE,
+__attribute__((unused)) static uint32_t maxPacketSizeList[] = {DEF_USB_EP0_HS_SIZE, DEF_USB_EP1_HS_SIZE, DEF_USB_EP2_HS_SIZE,
                                        DEF_USB_EP3_HS_SIZE, DEF_USB_EP4_HS_SIZE, DEF_USB_EP5_HS_SIZE,
                                        DEF_USB_EP6_HS_SIZE, DEF_USB_EP7_HS_SIZE};
 /*===========================================================================*/
@@ -433,10 +433,10 @@ void usb_lld_set_address(USBDriver *usbp) {
  * @notapi
  */
 void usb_lld_init_endpoint(USBDriver *usbp, usbep_t ep) {
-  const USBEndpointConfig *epcp = usbp->epc[ep];
-  uint32_t *dma_addr_reg;
-  uint32_t *maxlen_reg;
-  uint16_t *rxlen_reg;
+  __attribute__((unused)) const USBEndpointConfig *epcp = usbp->epc[ep];
+  __attribute__((unused)) uint32_t *dma_addr_reg;
+  __attribute__((unused)) uint32_t *maxlen_reg;
+  __attribute__((unused)) uint16_t *rxlen_reg;
   if(ep == 0){
     dma_addr_reg = (uint32_t *)&(CH32_USB_DEVICE->UEP0_DMA);
     maxlen_reg = (uint32_t *)&(CH32_USB_DEVICE->UEP0_MAX_LEN);
@@ -651,10 +651,10 @@ void usb_lld_start_out(USBDriver *usbp, usbep_t ep) {
 
   (void)usbp;
   (void)ep;
-  volatile uint16_t *rxlen_reg=NULL;
-  volatile uint8_t *txctlr_reg=NULL;
-  volatile uint8_t *rxctlr_reg=NULL;
-  volatile uint32_t *rxaddr_reg=NULL;
+  __attribute__((unused)) volatile uint16_t *rxlen_reg=NULL;
+  __attribute__((unused)) volatile uint8_t *txctlr_reg=NULL;
+  __attribute__((unused)) volatile uint8_t *rxctlr_reg=NULL;
+  __attribute__((unused)) volatile uint32_t *rxaddr_reg=NULL;
   
 
   switch (ep & 0x7f)
@@ -704,10 +704,10 @@ void usb_lld_start_in(USBDriver *usbp, usbep_t ep) {
 
   (void)usbp;
   (void)ep;
-  volatile uint16_t *txlen_reg=NULL;
-  volatile uint8_t *txctlr_reg=NULL;
-  volatile uint8_t *rxctlr_reg=NULL;
-  volatile uint32_t *txaddr_reg=NULL;
+  __attribute__((unused)) volatile uint16_t *txlen_reg=NULL;
+  __attribute__((unused)) volatile uint8_t *txctlr_reg=NULL;
+  __attribute__((unused)) volatile uint8_t *rxctlr_reg=NULL;
+  __attribute__((unused)) volatile uint32_t *txaddr_reg=NULL;
 
   switch (ep & 0x7f)
   {

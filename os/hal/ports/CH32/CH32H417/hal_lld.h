@@ -29,6 +29,7 @@
  * Registry definitions.
  */
 #include "ch32_registry.h"
+#include "ch32_dma.h"
 
 /*===========================================================================*/
 /* Driver constants.                                                         */

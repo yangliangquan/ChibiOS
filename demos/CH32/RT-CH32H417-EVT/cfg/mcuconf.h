@@ -58,12 +58,8 @@
  */
 #define CH32_ADC_PRE2_DIV                  RCC_PPRE2_ADCL_DIV16
 #define CH32_ADC_ADCPRE                    RCC_ADCPRE_ADCH_DIV8
-#define CH32_ADC_USE_ADC1                  FALSE
-#define CH32_ADC_USE_ADC2                  FALSE
-#define CH32_ADC_ADC1_DMA_ID               120
-#define CH32_ADC_ADC2_DMA_ID               121
-#define CH32_ADC_ADC1_DMA_PRIORITY         2
-#define CH32_ADC_ADC2_DMA_PRIORITY         2
+#define CH32_ADC_USE_ADC1                  TRUE
+#define CH32_ADC_USE_ADC2                  TRUE
 
 /*
  * CAN driver system settings.

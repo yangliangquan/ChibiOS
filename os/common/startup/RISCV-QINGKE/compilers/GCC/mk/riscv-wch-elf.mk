@@ -2,7 +2,7 @@
 # Compiler settings
 #
 
-TRGT = riscv-wch-elf-
+TRGT = ${TOOLCHAIN_PATH}riscv-wch-elf-
 CC   = $(TRGT)gcc
 CPPC = $(TRGT)g++
 # Enable loading with g++ only if you need C++ runtime support.

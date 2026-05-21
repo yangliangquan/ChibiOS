@@ -405,12 +405,12 @@ __attribute__((naked)) void _port_switch(thread_t *ntp, thread_t *otp)
 //     chSysUnlockFromISR();
 // }
 
-__attribute__((always_inline)) inline void _port_irq_prologue(void)
+__attribute__((always_inline)) static inline void _port_irq_prologue(void)
 {
     save_context_irq();
 }
 
-__attribute__((always_inline)) inline void _port_irq_epilogue(void)
+__attribute__((always_inline)) static inline void _port_irq_epilogue(void)
 {
     recover_context_irq();
     if (chSchIsPreemptionRequired())

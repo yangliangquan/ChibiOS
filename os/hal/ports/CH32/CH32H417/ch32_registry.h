@@ -76,10 +76,8 @@
 
 /* ADC attributes.*/
 #define CH32_HAS_ADC1 TRUE
-#define CH32_HAS_ADC2 FALSE
-#define CH32_HAS_ADC3 FALSE
-#define CH32_HAS_ADC4 FALSE
-#define CH32_HAS_ADC5 FALSE
+#define CH32_HAS_ADC2 TRUE
+#define CH32_ADC_SUPPORTS_PRESCALER        TRUE
 
 /* CAN attributes.*/
 #define CH32_HAS_CAN1 FALSE
@@ -90,11 +88,48 @@
 #define CH32_HAS_DAC1_CH2 FALSE
 
 /* DMA attributes.*/
+#define CH32_HAS_DMA1 TRUE
+#define CH32_HAS_DMA2 TRUE
 #define CH32_ADVANCED_DMA TRUE
 #define CH32_DMA_SUPPORTS_DMAMUX TRUE
 #define CH32_DMA_SUPPORTS_CSELR FALSE
 #define CH32_DMA1_NUM_CHANNELS 8
 #define CH32_DMA2_NUM_CHANNELS 8
+
+
+#define CH32_DMA1_CH1_HANDLER         DMA1_Channel1_IRQHandler
+#define CH32_DMA1_CH2_HANDLER         DMA1_Channel2_IRQHandler
+#define CH32_DMA1_CH3_HANDLER         DMA1_Channel3_IRQHandler
+#define CH32_DMA1_CH4_HANDLER         DMA1_Channel4_IRQHandler
+#define CH32_DMA1_CH5_HANDLER         DMA1_Channel5_IRQHandler
+#define CH32_DMA1_CH6_HANDLER         DMA1_Channel6_IRQHandler
+#define CH32_DMA1_CH7_HANDLER         DMA1_Channel7_IRQHandler
+#define CH32_DMA1_CH8_HANDLER         DMA1_Channel8_IRQHandler
+#define CH32_DMA2_CH1_HANDLER         DMA2_Channel1_IRQHandler
+#define CH32_DMA2_CH2_HANDLER         DMA2_Channel2_IRQHandler
+#define CH32_DMA2_CH3_HANDLER         DMA2_Channel3_IRQHandler
+#define CH32_DMA2_CH4_HANDLER         DMA2_Channel4_IRQHandler
+#define CH32_DMA2_CH5_HANDLER         DMA2_Channel5_IRQHandler
+#define CH32_DMA2_CH6_HANDLER         DMA2_Channel6_IRQHandler
+#define CH32_DMA2_CH7_HANDLER         DMA2_Channel7_IRQHandler
+#define CH32_DMA2_CH8_HANDLER         DMA2_Channel8_IRQHandler
+
+#define CH32_DMA1_CH1_NUMBER          DMA1_Channel1_IRQn
+#define CH32_DMA1_CH2_NUMBER          DMA1_Channel2_IRQn
+#define CH32_DMA1_CH3_NUMBER          DMA1_Channel3_IRQn
+#define CH32_DMA1_CH4_NUMBER          DMA1_Channel4_IRQn
+#define CH32_DMA1_CH5_NUMBER          DMA1_Channel5_IRQn
+#define CH32_DMA1_CH6_NUMBER          DMA1_Channel6_IRQn
+#define CH32_DMA1_CH7_NUMBER          DMA1_Channel7_IRQn
+#define CH32_DMA1_CH8_NUMBER          DMA1_Channel8_IRQn
+#define CH32_DMA2_CH1_NUMBER          DMA2_Channel1_IRQn
+#define CH32_DMA2_CH2_NUMBER          DMA2_Channel2_IRQn
+#define CH32_DMA2_CH3_NUMBER          DMA2_Channel3_IRQn
+#define CH32_DMA2_CH4_NUMBER          DMA2_Channel4_IRQn
+#define CH32_DMA2_CH5_NUMBER          DMA2_Channel5_IRQn
+#define CH32_DMA2_CH6_NUMBER          DMA2_Channel6_IRQn
+#define CH32_DMA2_CH7_NUMBER          DMA2_Channel7_IRQn
+#define CH32_DMA2_CH8_NUMBER          DMA2_Channel8_IRQn
 
 /* ETH attributes.*/
 #define CH32_HAS_ETH TRUE
