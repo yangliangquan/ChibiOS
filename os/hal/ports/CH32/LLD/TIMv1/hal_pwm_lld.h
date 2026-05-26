@@ -36,6 +36,43 @@
  */
 #define PWM_CHANNELS                            4
 
+/**
+ * @name    CH32-specific PWM complementary output mode macros
+ * @{
+ */
+/**
+ * @brief   Complementary output modes mask.
+ * @note    This is an CH32-specific setting.
+ */
+#define PWM_COMPLEMENTARY_OUTPUT_MASK           0xF0
+
+/**
+ * @brief   Complementary output not driven.
+ * @note    This is an CH32-specific setting.
+ */
+#define PWM_COMPLEMENTARY_OUTPUT_DISABLED       0x00
+
+/**
+ * @brief   Complementary output, active is logic level one.
+ * @note    This is an CH32-specific setting.
+ * @note    This setting is only available if the timer supports the
+ *          BDTR register.
+ */
+#define PWM_COMPLEMENTARY_OUTPUT_ACTIVE_HIGH    0x10
+
+/**
+ * @brief   Complementary output, active is logic level zero.
+ * @note    This is an CH32-specific setting.
+ * @note    This setting is only available if the timer supports the
+ *          BDTR register.
+ */
+#define PWM_COMPLEMENTARY_OUTPUT_ACTIVE_LOW     0x20
+/** @} */
+
+#define PWM_DRIVER_EXT_FIELDS \
+      TIM_TypeDef *tim;       \
+      bool has_bdtr;          
+
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
 /*===========================================================================*/
@@ -46,17 +83,197 @@
  */
 /**
  * @brief   PWMD1 driver enable switch.
- * @details If set to @p TRUE the support for PWM1 is included.
+ * @details If set to @p TRUE the support for PWMD1 is included.
  * @note    The default is @p FALSE.
  */
-#if !defined(CH32_PWM_USE_PWM1) || defined(__DOXYGEN__)
-#define CH32_PWM_USE_PWM1                  FALSE
+#if !defined(CH32_PWM_USE_TIM1) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM1                  FALSE
 #endif
+
+/**
+ * @brief   PWMD2 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD2 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM2) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM2                  FALSE
+#endif
+
+/**
+ * @brief   PWMD3 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD3 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM3) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM3                  FALSE
+#endif
+
+/**
+ * @brief   PWMD4 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD4 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM4) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM4                  FALSE
+#endif
+
+/**
+ * @brief   PWMD5 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD5 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM5) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM5                  FALSE
+#endif
+
+/**
+ * @brief   PWMD6 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD6 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM6) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM6                  FALSE
+#endif
+
+/**
+ * @brief   PWMD7 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD7 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM7) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM7                  FALSE
+#endif
+
+/**
+ * @brief   PWMD8 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD8 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM8) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM8                  FALSE
+#endif
+
+/**
+ * @brief   PWMD9 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD9 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM9) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM9                  FALSE
+#endif
+
+/**
+ * @brief   PWMD10 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD10 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM10) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM10                 FALSE
+#endif
+
+/**
+ * @brief   PWMD11 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD11 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM11) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM11                 FALSE
+#endif
+
+/**
+ * @brief   PWMD12 driver enable switch.
+ * @details If set to @p TRUE the support for PWMD12 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_PWM_USE_TIM12) || defined(__DOXYGEN__)
+#define CH32_PWM_USE_TIM12                 FALSE
+#endif
+
 /** @} */
 
 /*===========================================================================*/
 /* Configuration checks.                                                     */
 /*===========================================================================*/
+/* Checks on allocation of TIMx units.*/
+#if CH32_PWM_USE_TIM1
+#if defined(CH32_TIM1_IS_USED)
+#error "PWMD1 requires TIM1 but the timer is already used"
+#else
+#define CH32_TIM1_IS_USED
+#endif
+#endif
+
+#if CH32_PWM_USE_TIM2
+#if defined(CH32_TIM2_IS_USED)
+#error "PWMD2 requires TIM2 but the timer is already used"
+#else
+#define CH32_TIM2_IS_USED
+#endif
+#endif
+
+#if CH32_PWM_USE_TIM3
+#if defined(CH32_TIM3_IS_USED)
+#error "PWMD3 requires TIM3 but the timer is already used"
+#else
+#define CH32_TIM3_IS_USED
+#endif
+#endif
+
+#if CH32_PWM_USE_TIM4
+#if defined(CH32_TIM4_IS_USED)
+#error "PWMD4 requires TIM4 but the timer is already used"
+#else
+#define CH32_TIM4_IS_USED
+#endif
+#endif
+
+#if CH32_PWM_USE_TIM5
+#if defined(CH32_TIM5_IS_USED)
+#error "PWMD5 requires TIM5 but the timer is already used"
+#else
+#define CH32_TIM5_IS_USED
+#endif
+#endif
+
+#if CH32_PWM_USE_TIM8
+#if defined(CH32_TIM8_IS_USED)
+#error "PWMD8 requires TIM8 but the timer is already used"
+#else
+#define CH32_TIM8_IS_USED
+#endif
+#endif
+
+#if CH32_PWM_USE_TIM9
+#if defined(CH32_TIM9_IS_USED)
+#error "PWMD9 requires TIM9 but the timer is already used"
+#else
+#define CH32_TIM9_IS_USED
+#endif
+#endif
+
+#if CH32_PWM_USE_TIM10
+#if defined(CH32_TIM10_IS_USED)
+#error "PWMD10 requires TIM10 but the timer is already used"
+#else
+#define CH32_TIM10_IS_USED
+#endif
+#endif
+
+#if CH32_PWM_USE_TIM11
+#if defined(CH32_TIM11_IS_USED)
+#error "PWMD11 requires TIM11 but the timer is already used"
+#else
+#define CH32_TIM11_IS_USED
+#endif
+#endif
+
+#if CH32_PWM_USE_TIM12
+#if defined(CH32_TIM12_IS_USED)
+#error "PWMD12 requires TIM12 but the timer is already used"
+#else
+#define CH32_TIM12_IS_USED
+#endif
+#endif
 
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
@@ -181,13 +398,14 @@ struct PWMDriver {
 #define pwm_lld_change_period(pwmp, period) do {                            \
   (void)(pwmp);                                                             \
   (void)(period);                                                           \
+  pwmp->tim->ATRLR_32 = (uint32_t)(period - 1);                             \
 } while (false)
 
 /*===========================================================================*/
 /* External declarations.                                                    */
 /*===========================================================================*/
 
-#if (CH32_PWM_USE_PWM1 == TRUE) && !defined(__DOXYGEN__)
+#if (CH32_PWM_USE_TIM1 == TRUE) && !defined(__DOXYGEN__)
 extern PWMDriver PWMD1;
 #endif
 

@@ -19,6 +19,27 @@
 #include "usbcfg.h"
 #include "chprintf.h"
 
+
+void gpt_default_config_cb(GPTDriver *gptp){
+    (void)gptp;
+    palTogglePad(GPIOD, GPIO_PIN5);
+}
+static const GPTConfig gpt_default_config = {
+  .frequency = 1000,
+  .callback = gpt_default_config_cb
+};
+static THD_WORKING_AREA(waGPTThread, 1024);
+static THD_FUNCTION(GPTThread, arg){
+    (void)arg;
+    palSetPadMode(GPIOD, GPIO_PIN5, PAL_MODE_OUTPUT_PUSHPULL);
+    chRegSetThreadName("GPTThread");
+    gptStart(&GPTD2, &gpt_default_config);
+    gptStartContinuous(&GPTD2, 1000);
+    while(true){
+        chThdSleepMilliseconds(1000);
+    }
+}
+
 static const ADCConversionGroup adcgrpcfg = {
   .circular = false,
   .num_channels = 2,
@@ -79,14 +100,14 @@ static THD_FUNCTION(Thread1, arg)
 
 #include "shell.h"
 
-static void cmd_test(BaseSequentialStream *chp, int argc, char *argv[]) {
+static void cmd_hello(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void)argc;
   (void)argv;
   chprintf(chp, "Hello from ChibiOS Shell!\r\n");
 }
 
 static const ShellCommand commands[] = {
-  {"test", cmd_test},  
+  {"hello", cmd_hello},  
   {NULL, NULL}         
 };
 
@@ -116,24 +137,25 @@ int main(void)
     /*
      * Initializes a serial-over-USB CDC driver.
      */
-    sduObjectInit(&SDU1);
-    sduStart(&SDU1, &serusbcfg);
+    // sduObjectInit(&SDU1);
+    // sduStart(&SDU1, &serusbcfg);
 
     /*
      * Activates the USB driver and then the USB bus pull-up on D+.
      * Note, a delay is inserted in order to not have to disconnect the cable
      * after a reset.
      */
-    usbDisconnectBus(serusbcfg.usbp);
-    chThdSleepMilliseconds(1500);
-    usbStart(serusbcfg.usbp, &usbcfg);
-    usbConnectBus(serusbcfg.usbp);
+    // usbDisconnectBus(serusbcfg.usbp);
+    // chThdSleepMilliseconds(1500);
+    // usbStart(serusbcfg.usbp, &usbcfg);
+    // usbConnectBus(serusbcfg.usbp);
 
     /*
      * Creates the example thread.
      */
     chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
     chThdCreateStatic(waADCThread, sizeof(waADCThread), NORMALPRIO, ADCThread, NULL);
+    chThdCreateStatic(waGPTThread, sizeof(waGPTThread), NORMALPRIO, GPTThread, NULL);
 
     /*
      * Normal main() thread activity, in this demo it does nothing except
@@ -141,12 +163,12 @@ int main(void)
      */
     while (true)
     {
-        if (SDU1.config->usbp->state == USB_ACTIVE)
-        {
-            thread_t *shelltp =
-                chThdCreateFromHeap(NULL, SHELL_WA_SIZE, "shell", NORMALPRIO + 1, shellThread, (void *)&shell_cfg);
-            chThdWait(shelltp); /* Waiting termination.             */
-        }
+        // if (SDU1.config->usbp->state == USB_ACTIVE)
+        // {
+        //     thread_t *shelltp =
+        //         chThdCreateFromHeap(NULL, SHELL_WA_SIZE, "shell", NORMALPRIO + 1, shellThread, (void *)&shell_cfg);
+        //     chThdWait(shelltp); /* Waiting termination.             */
+        // }
         chThdSleepMilliseconds(500);
     }
 }
