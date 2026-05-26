@@ -41,13 +41,16 @@
 /**
  * @brief   CH32 specific alternate push-pull output mode.
  */
-#define PAL_MODE_CH32_ALTERNATE_PUSHPULL   16
+#define PAL_MODE_CH32_ALTERNATE_PUSHPULL   16U
 
 /**
  * @brief   CH32 specific alternate open-drain output mode.
  */
-#define PAL_MODE_CH32_ALTERNATE_OPENDRAIN  17
+#define PAL_MODE_CH32_ALTERNATE_OPENDRAIN  17U
 /** @} */
+
+#define PAL_CH32_ALTERNATE_PUSHPULL(n) PAL_MODE_CH32_ALTERNATE_PUSHPULL | ((uint32_t)(n) << 8)
+#define PAL_CH32_ALTERNATE_OPENDRAIN(n) PAL_MODE_CH32_ALTERNATE_OPENDRAIN | ((uint32_t)(n) << 8)
 
 /*===========================================================================*/
 /* I/O Ports Types and constants.                                            */

@@ -412,13 +412,14 @@ __attribute__((always_inline)) static inline void _port_irq_prologue(void)
 
 __attribute__((always_inline)) static inline void _port_irq_epilogue(void)
 {
-    recover_context_irq();
+    
     if (chSchIsPreemptionRequired())
     {
         chSysLock();
         chSchDoPreemption();
         chSysUnlock();
     }
+    recover_context_irq();
 
     asm volatile("mret");
 }

@@ -156,13 +156,13 @@ void pwm_lld_serve_interrupt(PWMDriver *pwmp)
         pwmp->config->callback(pwmp);
 }
 #if CH32_PWM_USE_TIM1 || defined(__DOXYGEN__)
-OSAL_IRQ_HANDLER(TIM1_UP_HANDLER) {
+OSAL_IRQ_HANDLER(TIM1_UP_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD1);
 
 }
 
-OSAL_IRQ_HANDLER(TIM1_CC_HANDLER) {
+OSAL_IRQ_HANDLER(TIM1_CC_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD1);
 
@@ -175,7 +175,7 @@ OSAL_IRQ_HANDLER(TIM1_CC_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM2_HANDLER) {
+OSAL_IRQ_HANDLER(TIM2_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD2);
 
@@ -188,7 +188,7 @@ OSAL_IRQ_HANDLER(TIM2_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM3_HANDLER) {
+OSAL_IRQ_HANDLER(TIM3_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD3);
 
@@ -201,7 +201,7 @@ OSAL_IRQ_HANDLER(TIM3_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM4_HANDLER) {
+OSAL_IRQ_HANDLER(TIM4_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD4);
 
@@ -214,7 +214,7 @@ OSAL_IRQ_HANDLER(TIM4_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM5_HANDLER) {
+OSAL_IRQ_HANDLER(TIM5_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD5);
 
@@ -230,7 +230,7 @@ OSAL_IRQ_HANDLER(TIM5_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM8_UP_HANDLER) {
+OSAL_IRQ_HANDLER(TIM8_UP_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD8);
 
@@ -244,7 +244,7 @@ OSAL_IRQ_HANDLER(TIM8_UP_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM8_CC_HANDLER) {
+OSAL_IRQ_HANDLER(TIM8_CC_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD8);
 
@@ -257,7 +257,7 @@ OSAL_IRQ_HANDLER(TIM8_CC_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM9_HANDLER) {
+OSAL_IRQ_HANDLER(TIM9_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD9);
 
@@ -270,7 +270,7 @@ OSAL_IRQ_HANDLER(TIM9_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM10_HANDLER) {
+OSAL_IRQ_HANDLER(TIM10_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD10);
 
@@ -283,7 +283,7 @@ OSAL_IRQ_HANDLER(TIM10_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM11_HANDLER) {
+OSAL_IRQ_HANDLER(TIM11_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD11);
 
@@ -296,7 +296,7 @@ OSAL_IRQ_HANDLER(TIM11_HANDLER) {
  *
  * @isr
  */
-OSAL_IRQ_HANDLER(TIM12_HANDLER) {
+OSAL_IRQ_HANDLER(TIM12_IRQHandler) {
 
   pwm_lld_serve_interrupt(&PWMD12);
 
@@ -410,7 +410,7 @@ void pwm_lld_start(PWMDriver *pwmp) {
     /* Clock activation and timer reset.*/
 #if CH32_PWM_USE_TIM1 == TRUE
     if (&PWMD1 == pwmp) {
-      enableHB1(RCC_TIM1EN);
+      enableHB2(RCC_TIM1EN);
       NVIC_EnableIRQ(TIM1_UP_IRQn);
       NVIC_EnableIRQ(TIM1_CC_IRQn);
     }
@@ -418,49 +418,49 @@ void pwm_lld_start(PWMDriver *pwmp) {
 
 #if CH32_PWM_USE_TIM2 == TRUE
     if (&PWMD2 == pwmp) {
-      enableHB2(RCC_TIM2EN);
+      enableHB1(RCC_TIM2EN);
       NVIC_EnableIRQ(TIM2_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM3 == TRUE
     if (&PWMD3 == pwmp) {
-      enableHB2(RCC_TIM3EN);
+      enableHB1(RCC_TIM3EN);
       NVIC_EnableIRQ(TIM3_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM4 == TRUE
     if (&PWMD4 == pwmp) {
-      enableHB2(RCC_TIM4EN);
+      enableHB1(RCC_TIM4EN);
       NVIC_EnableIRQ(TIM4_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM5 == TRUE
     if (&PWMD5 == pwmp) {
-      enableHB2(RCC_TIM5EN);
+      enableHB1(RCC_TIM5EN);
       NVIC_EnableIRQ(TIM5_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM6 == TRUE
     if (&PWMD6 == pwmp) {
-      enableHB2(RCC_TIM6EN);
+      enableHB1(RCC_TIM6EN);
       NVIC_EnableIRQ(TIM6_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM7 == TRUE
     if (&PWMD7 == pwmp) {
-      enableHB2(RCC_TIM7EN);
+      enableHB1(RCC_TIM7EN);
       NVIC_EnableIRQ(TIM7_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM8 == TRUE
     if (&PWMD8 == pwmp) {
-      enableHB1(RCC_TIM8EN);
+      enableHB2(RCC_TIM8EN);
       NVIC_EnableIRQ(TIM8_UP_IRQn);
       NVIC_EnableIRQ(TIM8_CC_IRQn);
     }
@@ -493,8 +493,8 @@ void pwm_lld_start(PWMDriver *pwmp) {
       NVIC_EnableIRQ(TIM12_IRQn);
     }
 #endif
-    pwmp->tim->CHCTLR1 &= ~(TIM_OC1M|TIM_OC2M);
-    pwmp->tim->CHCTLR2 &= ~(TIM_OC3M|TIM_OC4M);
+    pwmp->tim->CHCTLR1 = (((6 << 4) & TIM_OC1M) | ((6 << 12) & TIM_OC2M))| TIM_OC1PE|TIM_OC2PE;  
+    pwmp->tim->CHCTLR2 = (((6 << 4) & TIM_OC3M) | ((6 << 12) & TIM_OC4M))|TIM_OC3PE|TIM_OC4PE;
   }
   else
   {
@@ -509,7 +509,8 @@ void pwm_lld_start(PWMDriver *pwmp) {
     pwmp->tim->CNT_32 = 0;
   }
   uint32_t psc = (clock / pwmp->config->frequency) - 1;
-
+  if(psc > 0xffff)
+    osalSysHalt("Cannot configure GPT: psc too large");
   pwmp->tim->PSC = psc;
   pwmp->tim->ATRLR_32 = pwmp->config->period - 1;
   pwmp->tim->CTLR2 = 0;
@@ -518,7 +519,6 @@ void pwm_lld_start(PWMDriver *pwmp) {
     switch (pwmp->config->channels[i].mode & PWM_OUTPUT_MASK) {
       case PWM_OUTPUT_ACTIVE_HIGH:
         ccer |= TIM_CC1P << (i * 4);
-        break;
       case PWM_OUTPUT_ACTIVE_LOW:
         ccer |= TIM_CC1E << (i * 4);
         break;
@@ -531,10 +531,9 @@ void pwm_lld_start(PWMDriver *pwmp) {
     for (int i = 0; i < pwmp->channels; i++) {
       switch (pwmp->config->channels[i].mode & PWM_COMPLEMENTARY_OUTPUT_MASK) {
         case PWM_COMPLEMENTARY_OUTPUT_ACTIVE_HIGH:
-          pwmp->tim->BDTR |= TIM_CC1NP << (i * 4);
-          break;
+          ccer |= TIM_CC1NP << (i * 4);
         case PWM_COMPLEMENTARY_OUTPUT_ACTIVE_LOW:
-          pwmp->tim->BDTR |= TIM_CC1NE << (i * 4);
+          ccer |= TIM_CC1NE << (i * 4);
           break;
         default:
           break;
@@ -573,7 +572,7 @@ void pwm_lld_stop(PWMDriver *pwmp) {
   if (pwmp->state == PWM_READY) {
 #if CH32_PWM_USE_TIM1 == TRUE
     if (&PWMD1 == pwmp) {
-      disableHB1(RCC_TIM1EN);
+      disableHB2(RCC_TIM1EN);
       NVIC_DisableIRQ(TIM1_UP_IRQn);
       NVIC_DisableIRQ(TIM1_CC_IRQn);
     }
@@ -581,49 +580,49 @@ void pwm_lld_stop(PWMDriver *pwmp) {
 
 #if CH32_PWM_USE_TIM2 == TRUE
     if (&PWMD2 == pwmp) {
-      disableHB2(RCC_TIM2EN);
+      disableHB1(RCC_TIM2EN);
       NVIC_DisableIRQ(TIM2_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM3 == TRUE
     if (&PWMD3 == pwmp) {
-      disableHB2(RCC_TIM3EN);
+      disableHB1(RCC_TIM3EN);
       NVIC_DisableIRQ(TIM3_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM4 == TRUE
     if (&PWMD4 == pwmp) {
-      disableHB2(RCC_TIM4EN);
+      disableHB1(RCC_TIM4EN);
       NVIC_DisableIRQ(TIM4_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM5 == TRUE
     if (&PWMD5 == pwmp) {
-      disableHB2(RCC_TIM5EN);
+      disableHB1(RCC_TIM5EN);
       NVIC_DisableIRQ(TIM5_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM6 == TRUE
     if (&PWMD6 == pwmp) {
-      disableHB2(RCC_TIM6EN);
+      disableHB1(RCC_TIM6EN);
       NVIC_DisableIRQ(TIM6_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM7 == TRUE
     if (&PWMD7 == pwmp) {
-      disableHB2(RCC_TIM7EN);
+      disableHB1(RCC_TIM7EN);
       NVIC_DisableIRQ(TIM7_IRQn);
     }
 #endif
 
 #if CH32_PWM_USE_TIM8 == TRUE
     if (&PWMD8 == pwmp) {
-      disableHB1(RCC_TIM8EN);
+      disableHB2(RCC_TIM8EN);
       NVIC_DisableIRQ(TIM8_UP_IRQn);
       NVIC_DisableIRQ(TIM8_CC_IRQn);
     }

@@ -84,6 +84,31 @@ void _pal_lld_init(void) {
 void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
 {
     uint32_t modeval = 0x44444444, odrval = 0;
+    if (IOPORT1 == port)
+    {
+        enableHB2(RCC_IOPAEN);
+    }
+    else if (IOPORT2 == port)
+    {
+        enableHB2(RCC_IOPBEN);
+    }
+    else if (IOPORT3 == port)
+    {
+        enableHB2(RCC_IOPCEN);
+    }
+    else if (IOPORT4 == port)
+    {
+        enableHB2(RCC_IOPDEN);
+    }
+    else if (IOPORT5 == port)
+    {
+        enableHB2(RCC_IOPEEN);
+    }
+    else if (IOPORT6 == port)
+    {
+        enableHB2(RCC_IOPFEN);
+    }
+
     if (mode == PAL_MODE_INPUT)
     {
         modeval = 0x44444444;
@@ -113,39 +138,42 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
     {
         modeval = 0x44444444;
     }
-    else if (mode == PAL_MODE_CH32_ALTERNATE_PUSHPULL)
+    else if ((mode & 0xff) == PAL_MODE_CH32_ALTERNATE_PUSHPULL)
     {
         modeval = 0xbbbbbbbb;
+        enableHB2(RCC_AFIOEN);
+        uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1) / 0x400) * 8) + &( AFIO->GPIOA_AFLR);
+        for(size_t i = 0; i < PAL_IOPORTS_WIDTH; i++){
+            if((1U << i) & mask){
+                if(i < 8)
+                {
+                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                }else if(i < 16)
+                {
+                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                }
+            }
+        }
     }
-    else if (mode == PAL_MODE_CH32_ALTERNATE_OPENDRAIN)
+    else if ((mode & 0xff) == PAL_MODE_CH32_ALTERNATE_OPENDRAIN)
     {
         modeval = 0xffffffff;
+        enableHB2(RCC_AFIOEN);
+        uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1) / 0x400) * 8) + &(AFIO->GPIOA_AFLR);
+        for(size_t i = 0; i < PAL_IOPORTS_WIDTH; i++){
+            if((1U << i) & mask){
+                if(i < 8)
+                {
+                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                }else if(i < 16)
+                {
+                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                }
+            }
+        }
     }
 
-    if (IOPORT1 == port)
-    {
-        enableHB2(RCC_IOPAEN);
-    }
-    else if (IOPORT2 == port)
-    {
-        enableHB2(RCC_IOPBEN);
-    }
-    else if (IOPORT3 == port)
-    {
-        enableHB2(RCC_IOPCEN);
-    }
-    else if (IOPORT4 == port)
-    {
-        enableHB2(RCC_IOPDEN);
-    }
-    else if (IOPORT5 == port)
-    {
-        enableHB2(RCC_IOPEEN);
-    }
-    else if (IOPORT6 == port)
-    {
-        enableHB2(RCC_IOPFEN);
-    }
+    
 
     ioportid_t p = port;
 

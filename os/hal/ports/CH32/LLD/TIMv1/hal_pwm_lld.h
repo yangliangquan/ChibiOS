@@ -405,8 +405,44 @@ struct PWMDriver {
 /* External declarations.                                                    */
 /*===========================================================================*/
 
-#if (CH32_PWM_USE_TIM1 == TRUE) && !defined(__DOXYGEN__)
+#if CH32_PWM_USE_TIM1 && !defined(__DOXYGEN__)
 extern PWMDriver PWMD1;
+#endif
+
+#if CH32_PWM_USE_TIM2 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD2;
+#endif
+
+#if CH32_PWM_USE_TIM3 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD3;
+#endif
+
+#if CH32_PWM_USE_TIM4 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD4;
+#endif
+
+#if CH32_PWM_USE_TIM5 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD5;
+#endif
+
+#if CH32_PWM_USE_TIM8 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD8;
+#endif
+
+#if CH32_PWM_USE_TIM9 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD9;
+#endif
+
+#if CH32_PWM_USE_TIM10 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD10;
+#endif
+
+#if CH32_PWM_USE_TIM11 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD11;
+#endif
+
+#if CH32_PWM_USE_TIM12 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD12;
 #endif
 
 #ifdef __cplusplus

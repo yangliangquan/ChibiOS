@@ -19,13 +19,35 @@
 #include "usbcfg.h"
 #include "chprintf.h"
 
+static const PWMConfig pwmgrpcfg = {
+  .frequency = 10000,
+  .period = 1000,
+  .callback = NULL,
+  .channels = {
+    {.mode = PWM_OUTPUT_ACTIVE_HIGH, .callback = NULL},
+  }
+};
+
+static THD_WORKING_AREA(waPWMThread, 1024);
+static THD_FUNCTION(PWMThread, arg){
+    (void)arg;
+    chRegSetThreadName("PWMThread");
+    palSetPadMode(GPIOA, GPIO_PIN6, PAL_CH32_ALTERNATE_PUSHPULL(2));
+    pwmStart(&PWMD3, &pwmgrpcfg);
+    static uint16_t duty = 0;
+    while(true){
+
+        chThdSleepMilliseconds(500);
+        pwmEnableChannel(&PWMD3, 0, duty++);
+    }
+}
 
 void gpt_default_config_cb(GPTDriver *gptp){
     (void)gptp;
     palTogglePad(GPIOD, GPIO_PIN5);
 }
 static const GPTConfig gpt_default_config = {
-  .frequency = 1000,
+  .frequency = 10000,
   .callback = gpt_default_config_cb
 };
 static THD_WORKING_AREA(waGPTThread, 1024);
@@ -34,7 +56,7 @@ static THD_FUNCTION(GPTThread, arg){
     palSetPadMode(GPIOD, GPIO_PIN5, PAL_MODE_OUTPUT_PUSHPULL);
     chRegSetThreadName("GPTThread");
     gptStart(&GPTD2, &gpt_default_config);
-    gptStartContinuous(&GPTD2, 1000);
+    gptStartContinuous(&GPTD2, 10000);
     while(true){
         chThdSleepMilliseconds(1000);
     }
@@ -156,6 +178,7 @@ int main(void)
     chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
     chThdCreateStatic(waADCThread, sizeof(waADCThread), NORMALPRIO, ADCThread, NULL);
     chThdCreateStatic(waGPTThread, sizeof(waGPTThread), NORMALPRIO, GPTThread, NULL);
+    chThdCreateStatic(waPWMThread, sizeof(waPWMThread), NORMALPRIO, PWMThread, NULL);
 
     /*
      * Normal main() thread activity, in this demo it does nothing except

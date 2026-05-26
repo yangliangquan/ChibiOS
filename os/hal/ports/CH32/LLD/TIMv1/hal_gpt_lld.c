@@ -499,6 +499,8 @@ void gpt_lld_start(GPTDriver *gptp) {
   }
   /* Configures the peripheral.*/
   uint32_t psc = (clock / gptp->config->frequency) - 1;
+  if(psc > 0xffff)
+    osalSysHalt("Cannot configure GPT: psc too large");
   gptp->tim->CTLR2 = 0;
   gptp->tim->CTLR1 = 0;
   gptp->tim->PSC = psc;
@@ -523,56 +525,56 @@ void gpt_lld_stop(GPTDriver *gptp) {
     /* Disables the peripheral.*/
 #if CH32_GPT_USE_TIM1 == TRUE
     if (&GPTD1 == gptp) {
-      disableHB1(RCC_TIM1EN);
+      disableHB2(RCC_TIM1EN);
       NVIC_DisableIRQ(TIM1_UP_IRQn);
     }
 #endif
 
 #if CH32_GPT_USE_TIM2 == TRUE
     if (&GPTD2 == gptp) {
-      disableHB2(RCC_TIM2EN);
+      disableHB1(RCC_TIM2EN);
       NVIC_DisableIRQ(TIM2_IRQn);
     }
 #endif
 
 #if CH32_GPT_USE_TIM3 == TRUE
     if (&GPTD3 == gptp) {
-      disableHB2(RCC_TIM3EN);
+      disableHB1(RCC_TIM3EN);
       NVIC_DisableIRQ(TIM3_IRQn);
     }
 #endif
 
 #if CH32_GPT_USE_TIM4 == TRUE
     if (&GPTD4 == gptp) {
-      disableHB2(RCC_TIM4EN);
+      disableHB1(RCC_TIM4EN);
       NVIC_DisableIRQ(TIM4_IRQn);
     }
 #endif
 
 #if CH32_GPT_USE_TIM5 == TRUE
     if (&GPTD5 == gptp) {
-      disableHB2(RCC_TIM5EN);
+      disableHB1(RCC_TIM5EN);
       NVIC_DisableIRQ(TIM5_IRQn);
     }
 #endif
 
 #if CH32_GPT_USE_TIM6 == TRUE
     if (&GPTD6 == gptp) {
-      disableHB2(RCC_TIM6EN);
+      disableHB1(RCC_TIM6EN);
       NVIC_DisableIRQ(TIM6_IRQn);
     }
 #endif
 
 #if CH32_GPT_USE_TIM7 == TRUE
     if (&GPTD7 == gptp) {
-      disableHB2(RCC_TIM7EN);
+      disableHB1(RCC_TIM7EN);
       NVIC_DisableIRQ(TIM7_IRQn);
     }
 #endif
 
 #if CH32_GPT_USE_TIM8 == TRUE
     if (&GPTD8 == gptp) {
-      disableHB1(RCC_TIM8EN);
+      disableHB2(RCC_TIM8EN);
       NVIC_DisableIRQ(TIM8_UP_IRQn);
     }
 #endif
