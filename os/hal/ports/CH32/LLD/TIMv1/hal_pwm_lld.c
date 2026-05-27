@@ -405,7 +405,7 @@ void pwm_lld_init(void) {
  * @notapi
  */
 void pwm_lld_start(PWMDriver *pwmp) {
-  uint32_t clock = hal_lld_get_clock_point(NULL);
+  uint32_t clock = hal_lld_get_clock_point((halclkpt_t)NULL);
   if (pwmp->state == PWM_STOP) {
     /* Clock activation and timer reset.*/
 #if CH32_PWM_USE_TIM1 == TRUE
@@ -519,6 +519,7 @@ void pwm_lld_start(PWMDriver *pwmp) {
     switch (pwmp->config->channels[i].mode & PWM_OUTPUT_MASK) {
       case PWM_OUTPUT_ACTIVE_HIGH:
         ccer |= TIM_CC1P << (i * 4);
+      // Fall through
       case PWM_OUTPUT_ACTIVE_LOW:
         ccer |= TIM_CC1E << (i * 4);
         break;
@@ -532,6 +533,7 @@ void pwm_lld_start(PWMDriver *pwmp) {
       switch (pwmp->config->channels[i].mode & PWM_COMPLEMENTARY_OUTPUT_MASK) {
         case PWM_COMPLEMENTARY_OUTPUT_ACTIVE_HIGH:
           ccer |= TIM_CC1NP << (i * 4);
+        // Fall through
         case PWM_COMPLEMENTARY_OUTPUT_ACTIVE_LOW:
           ccer |= TIM_CC1NE << (i * 4);
           break;
@@ -544,7 +546,7 @@ void pwm_lld_start(PWMDriver *pwmp) {
   pwmp->tim->CCER = ccer;
   pwmp->tim->SWEVGR |= TIM_UG;
   pwmp->tim->INTFR = 0;
-  pwmp->tim->DMAINTENR = pwmp->tim->DMAINTENR & ~(TIM_CC1IE | TIM_CC2IE | TIM_CC3IE |
+  pwmp->tim->DMAINTENR = (pwmp->config->dma_settings << 8) & ~(TIM_CC1IE | TIM_CC2IE | TIM_CC3IE |
                                                TIM_CC4IE | TIM_UIE);
 
   if(pwmp->has_bdtr){

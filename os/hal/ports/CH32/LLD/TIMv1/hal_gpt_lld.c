@@ -410,7 +410,7 @@ void gpt_lld_init(void) {
  */
 void gpt_lld_start(GPTDriver *gptp) {
 
-  uint32_t clock = hal_lld_get_clock_point(NULL);
+  uint32_t clock = hal_lld_get_clock_point((halclkpt_t)NULL);
   if (gptp->state == GPT_STOP) {
     /* Enables the peripheral.*/
 #if CH32_GPT_USE_TIM1 == TRUE

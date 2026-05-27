@@ -343,6 +343,8 @@ typedef struct {
    */
   PWMChannelConfig          channels[PWM_CHANNELS];
   /* End of the mandatory fields.*/
+  /* DMA settings: bit 0: update, bit 1: capture 0, bit 2: capture 1, bit 3: capture 2, bit 4: capture 3, bit 5: trigger*/
+  uint16_t                  dma_settings; 
 } PWMConfig;
 
 /**

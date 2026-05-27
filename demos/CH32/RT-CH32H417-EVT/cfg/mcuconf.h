@@ -110,6 +110,24 @@
 #define CH32_PWM_USE_TIM14                 FALSE
 
 /*
+ * ICU driver system settings.
+ */
+#define CH32_ICU_USE_TIM1                  FALSE
+#define CH32_ICU_USE_TIM2                  FALSE
+#define CH32_ICU_USE_TIM3                  FALSE
+#define CH32_ICU_USE_TIM4                  TRUE
+#define CH32_ICU_USE_TIM5                  FALSE
+#define CH32_ICU_USE_TIM6                  FALSE
+#define CH32_ICU_USE_TIM7                  FALSE
+#define CH32_ICU_USE_TIM8                  FALSE
+#define CH32_ICU_USE_TIM9                  FALSE
+#define CH32_ICU_USE_TIM10                 FALSE
+#define CH32_ICU_USE_TIM11                 FALSE
+#define CH32_ICU_USE_TIM12                 FALSE
+#define CH32_ICU_USE_TIM13                 FALSE
+#define CH32_ICU_USE_TIM14                 FALSE
+
+/*
  * I2C driver system settings.
  */
 #define CH32_I2C_USE_I2C1                  FALSE

@@ -109,9 +109,22 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
         enableHB2(RCC_IOPFEN);
     }
 
-    if (mode == PAL_MODE_INPUT)
+    if ((mode & 0xff) == PAL_MODE_INPUT)
     {
         modeval = 0x44444444;
+        enableHB2(RCC_AFIOEN);
+        uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1)) / 0x400 * 8) + (uint32_t)&(AFIO->GPIOA_AFLR);
+        for(size_t i = 0; i < PAL_IOPORTS_WIDTH; i++){
+            if((1U << i) & mask){
+                if(i < 8)
+                {
+                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                }else if(i < 16)
+                {
+                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                }
+            }
+        }
     }
     else if (mode == PAL_MODE_OUTPUT_PUSHPULL)
     {
@@ -121,14 +134,40 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
     {
         modeval = 0x77777777;
     }
-    else if (mode == PAL_MODE_INPUT_PULLUP)
+    else if ((mode & 0xff) == PAL_MODE_INPUT_PULLUP)
     {
         modeval = 0x88888888;
         odrval = 0xFFFFFFFF;
+        enableHB2(RCC_AFIOEN);
+        uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1)) / 0x400* 8) + (uint32_t)&(AFIO->GPIOA_AFLR);
+        for(size_t i = 0; i < PAL_IOPORTS_WIDTH; i++){
+            if((1U << i) & mask){
+                if(i < 8)
+                {
+                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                }else if(i < 16)
+                {
+                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                }
+            }
+        }
     }
-    else if (mode == PAL_MODE_INPUT_PULLDOWN)
+    else if ((mode & 0xff) == PAL_MODE_INPUT_PULLDOWN)
     {
         modeval = 0x88888888;
+        enableHB2(RCC_AFIOEN);
+        uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1)) / 0x400* 8) + (uint32_t)&(AFIO->GPIOA_AFLR);
+        for(size_t i = 0; i < PAL_IOPORTS_WIDTH; i++){
+            if((1U << i) & mask){
+                if(i < 8)
+                {
+                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                }else if(i < 16)
+                {
+                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                }
+            }
+        }
     }
     else if (mode == PAL_MODE_INPUT_ANALOG)
     {
@@ -142,7 +181,7 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
     {
         modeval = 0xbbbbbbbb;
         enableHB2(RCC_AFIOEN);
-        uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1) / 0x400) * 8) + &( AFIO->GPIOA_AFLR);
+        uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1)) / 0x400 * 8) + (uint32_t)&( AFIO->GPIOA_AFLR);
         for(size_t i = 0; i < PAL_IOPORTS_WIDTH; i++){
             if((1U << i) & mask){
                 if(i < 8)
@@ -159,7 +198,7 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
     {
         modeval = 0xffffffff;
         enableHB2(RCC_AFIOEN);
-        uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1) / 0x400) * 8) + &(AFIO->GPIOA_AFLR);
+        uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1)) / 0x400 * 8) + (uint32_t)&(AFIO->GPIOA_AFLR);
         for(size_t i = 0; i < PAL_IOPORTS_WIDTH; i++){
             if((1U << i) & mask){
                 if(i < 8)
@@ -202,6 +241,48 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
 
     p->OUTDR = (p->OUTDR & ~mask) | (mask & odrval);
 }
+
+#if PAL_USE_CALLBACKS || PAL_USE_WAIT
+void _pal_lld_enablepadevent(ioportid_t port, uint8_t pad, ioeventmode_t mode)
+{
+    uint32_t portnum = (((uint32_t)port - (uint32_t)IOPORT1) / 0x400);
+
+    enableHB2(RCC_AFIOEN);
+
+    if(pad < GPIO_PIN8){
+        AFIO->EXTICR1 = (AFIO->EXTICR1 & ~(0xf << (pad * 4)) ) | (portnum << (pad * 4));
+        NVIC_EnableIRQ(EXTI7_0_IRQn);
+    }else{
+        AFIO->EXTICR2 = (AFIO->EXTICR2 & ~(0xf << ((pad - 8) * 4)) ) | (portnum << ((pad - 8) * 4));
+        NVIC_EnableIRQ(EXTI15_8_IRQn);
+    }
+    EXTI->INTENR |= (mode << pad);
+    if(mode == PAL_EVENT_MODE_RISING_EDGE){
+        EXTI->RTENR |= (1 << pad);
+        EXTI->FTENR &= ~(1 << pad);
+    }else if(mode == PAL_EVENT_MODE_FALLING_EDGE){
+        EXTI->FTENR |= (1 << pad);
+        EXTI->RTENR &= ~(1 << pad);
+    }else if(mode == PAL_EVENT_MODE_BOTH_EDGES){
+        EXTI->RTENR |= (1 << pad);
+        EXTI->FTENR |= (1 << pad);
+    }
+}
+void _pal_lld_disablepadevent(ioportid_t port, uint8_t pad)
+{
+    EXTI->INTENR &= ~(1 << pad);
+    EXTI->RTENR &= ~(1 << pad);
+    EXTI->FTENR &= ~(1 << pad);
+    if (pad < GPIO_PIN8)
+    {
+        NVIC_DisableIRQ(EXTI7_0_IRQn);
+    }
+    else
+    {
+        NVIC_DisableIRQ(EXTI15_8_IRQn);
+    }
+}
+#endif /* PAL_USE_CALLBACKS || PAL_USE_WAIT */
 
 #endif /* HAL_USE_PAL == TRUE */
 

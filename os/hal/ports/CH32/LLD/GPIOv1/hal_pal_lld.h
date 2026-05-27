@@ -51,6 +51,9 @@
 
 #define PAL_CH32_ALTERNATE_PUSHPULL(n) PAL_MODE_CH32_ALTERNATE_PUSHPULL | ((uint32_t)(n) << 8)
 #define PAL_CH32_ALTERNATE_OPENDRAIN(n) PAL_MODE_CH32_ALTERNATE_OPENDRAIN | ((uint32_t)(n) << 8)
+#define PAL_CH32_ALTERNATE_INPUT(n) PAL_MODE_INPUT | ((uint32_t)(n) << 8)
+#define PAL_CH32_ALTERNATE_INPUT_PULLUP(n) PAL_MODE_INPUT_PULLUP| ((uint32_t)(n) << 8)
+#define PAL_CH32_ALTERNATE_INPUT_PULLDOWN(n) PAL_MODE_INPUT_PULLDOWN| ((uint32_t)(n) << 8)
 
 /*===========================================================================*/
 /* I/O Ports Types and constants.                                            */
@@ -88,7 +91,7 @@
  * @brief   Decodes a port identifier from a line identifier.
  */
 #define PAL_PORT(line)                                                      \
-  ((CH32_gpio_t *)(((uint32_t)(line)) & 0xFFFFFFF0U))
+  ((GPIO_TypeDef *)(((uint32_t)(line)) & 0xFFFFFFF0U))
 
 /**
  * @brief   Decodes a pad identifier from a line identifier.
@@ -123,6 +126,12 @@ typedef struct {
 typedef struct {
   ch32_setup_t setup[eGPIO_PORTS];
 } PALConfig;
+
+
+/**
+ * @brief   Type of an event mode.
+ */
+typedef uint32_t ioeventmode_t;
 
 /**
  * @brief   Digital I/O port sized unsigned type.
@@ -485,8 +494,36 @@ typedef uint32_t iopadid_t;
  * @notapi
  */
 #define pal_lld_get_line_event(line)                                        \
-  &_pal_events[PAL_PORT(line)];
+  &_pal_events[PAL_PAD(line)];
 
+#if PAL_USE_CALLBACKS || PAL_USE_WAIT
+/**
+ * @brief   Pad event enable.
+ * @note    Programming an unknown or unsupported mode is silently ignored.
+ *
+ * @param[in] port      port identifier
+ * @param[in] pad       pad number within the port
+ * @param[in] mode      pad event mode
+ *
+ * @notapi
+ */
+#define pal_lld_enablepadevent(port, pad, mode)                             \
+  _pal_lld_enablepadevent(port, pad, mode)
+
+/**
+ * @brief   Pad event disable.
+ * @details This function disables previously programmed event callbacks.
+ *
+ * @param[in] port      port identifier
+ * @param[in] pad       pad number within the port
+ *
+ * @notapi
+ */
+#define pal_lld_disablepadevent(port, pad)                                  \
+  _pal_lld_disablepadevent(port, pad)
+
+#endif /* PAL_USE_CALLBACKS || PAL_USE_WAIT */
+  
 #if !defined(__DOXYGEN__)
 extern const PALConfig pal_default_config;
 #if (PAL_USE_WAIT == TRUE) || (PAL_USE_CALLBACKS == TRUE)
@@ -501,6 +538,10 @@ extern "C" {
   void _pal_lld_setgroupmode(ioportid_t port,
                              ioportmask_t mask,
                              iomode_t mode);
+#if PAL_USE_CALLBACKS || PAL_USE_WAIT
+  void _pal_lld_enablepadevent(ioportid_t port, uint8_t pad, iomode_t mode);
+  void _pal_lld_disablepadevent(ioportid_t port, uint8_t pad);
+#endif /* PAL_USE_CALLBACKS || PAL_USE_WAIT */
 #ifdef __cplusplus
 }
 #endif

@@ -30,7 +30,11 @@
 /*===========================================================================*/
 /* Driver constants.                                                         */
 /*===========================================================================*/
-
+#define ICU_DRIVER_EXT_FIELDS                                                                                          \
+    /* Extension fields.*/                                                                                             \
+    TIM_TypeDef *tim;                                                                                                  \
+    volatile uint32_t *wccrp;                                                                                          \
+    volatile uint32_t *pccrp;
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
 /*===========================================================================*/
@@ -44,15 +48,193 @@
  * @details If set to @p TRUE the support for ICUD1 is included.
  * @note    The default is @p FALSE.
  */
-#if !defined(CH32_ICU_USE_ICU1) || defined(__DOXYGEN__)
-#define CH32_ICU_USE_ICU1                  FALSE
+#if !defined(CH32_ICU_USE_TIM1) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM1                  FALSE
+#endif
+
+/**
+ * @brief   ICUD2 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD2 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM2) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM2                  FALSE
+#endif
+
+/**
+ * @brief   ICUD3 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD3 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM3) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM3                  FALSE
+#endif
+
+/**
+ * @brief   ICUD4 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD4 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM4) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM4                  FALSE
+#endif
+
+/**
+ * @brief   ICUD5 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD5 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM5) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM5                  FALSE
+#endif
+
+/**
+ * @brief   ICUD6 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD6 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM6) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM6                  FALSE
+#endif
+
+/**
+ * @brief   ICUD7 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD7 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM7) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM7                  FALSE
+#endif
+
+/**
+ * @brief   ICUD8 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD8 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM8) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM8                  FALSE
+#endif
+
+/**
+ * @brief   ICUD9 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD9 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM9) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM9                  FALSE
+#endif
+
+/**
+ * @brief   ICUD10 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD10 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM10) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM10                 FALSE
+#endif
+
+/**
+ * @brief   ICUD11 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD11 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM11) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM11                 FALSE
+#endif
+
+/**
+ * @brief   ICUD12 driver enable switch.
+ * @details If set to @p TRUE the support for ICUD12 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_ICU_USE_TIM12) || defined(__DOXYGEN__)
+#define CH32_ICU_USE_TIM12                 FALSE
 #endif
 /** @} */
 
 /*===========================================================================*/
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
+/* Checks on allocation of TIMx units.*/
+#if CH32_ICU_USE_TIM1
+#if defined(CH32_TIM1_IS_USED)
+#error "ICUD1 requires TIM1 but the timer is already used"
+#else
+#define CH32_TIM1_IS_USED
+#endif
+#endif
 
+#if CH32_ICU_USE_TIM2
+#if defined(CH32_TIM2_IS_USED)
+#error "ICUD2 requires TIM2 but the timer is already used"
+#else
+#define CH32_TIM2_IS_USED
+#endif
+#endif
+
+#if CH32_ICU_USE_TIM3
+#if defined(CH32_TIM3_IS_USED)
+#error "ICUD3 requires TIM3 but the timer is already used"
+#else
+#define CH32_TIM3_IS_USED
+#endif
+#endif
+
+#if CH32_ICU_USE_TIM4
+#if defined(CH32_TIM4_IS_USED)
+#error "ICUD4 requires TIM4 but the timer is already used"
+#else
+#define CH32_TIM4_IS_USED
+#endif
+#endif
+
+#if CH32_ICU_USE_TIM5
+#if defined(CH32_TIM5_IS_USED)
+#error "ICUD5 requires TIM5 but the timer is already used"
+#else
+#define CH32_TIM5_IS_USED
+#endif
+#endif
+
+#if CH32_ICU_USE_TIM8
+#if defined(CH32_TIM8_IS_USED)
+#error "ICUD8 requires TIM8 but the timer is already used"
+#else
+#define CH32_TIM8_IS_USED
+#endif
+#endif
+
+#if CH32_ICU_USE_TIM9
+#if defined(CH32_TIM9_IS_USED)
+#error "ICUD9 requires TIM9 but the timer is already used"
+#else
+#define CH32_TIM9_IS_USED
+#endif
+#endif
+
+#if CH32_ICU_USE_TIM10
+#if defined(CH32_TIM10_IS_USED)
+#error "ICUD10 requires TIM10 but the timer is already used"
+#else
+#define CH32_TIM10_IS_USED
+#endif
+#endif
+
+#if CH32_ICU_USE_TIM11
+#if defined(CH32_TIM11_IS_USED)
+#error "ICUD11 requires TIM11 but the timer is already used"
+#else
+#define CH32_TIM11_IS_USED
+#endif
+#endif
+
+#if CH32_ICU_USE_TIM12
+#if defined(CH32_TIM12_IS_USED)
+#error "ICUD12 requires TIM12 but the timer is already used"
+#else
+#define CH32_TIM12_IS_USED
+#endif
+#endif
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
 /*===========================================================================*/
@@ -103,6 +285,10 @@ typedef struct {
    */
   icucallback_t             overflow_cb;
   /* End of the mandatory fields.*/
+  /* DMA settings: bit 0: update, bit 1: capture 0, bit 2: capture 1, bit 3: capture 2, bit 4: capture 3, bit 5: trigger*/
+  uint16_t                  dma_settings; 
+
+  uint32_t                  arr; /* Auto-reload value, zero means maximum value. */
 } ICUConfig;
 
 /**
@@ -137,7 +323,7 @@ struct ICUDriver {
  *
  * @notapi
  */
-#define icu_lld_get_width(icup) 0
+#define icu_lld_get_width(icup) (*((icup)->wccrp) + 1)
 
 /**
  * @brief   Returns the width of the latest cycle.
@@ -149,7 +335,7 @@ struct ICUDriver {
  *
  * @notapi
  */
-#define icu_lld_get_period(icup) 0
+#define icu_lld_get_period(icup) (*((icup)->pccrp) + 1)
 
 /**
  * @brief   Check on notifications status.
@@ -161,14 +347,52 @@ struct ICUDriver {
  *
  * @notapi
  */
-#define icu_lld_are_notifications_enabled(icup) false
+#define icu_lld_are_notifications_enabled(icup)                                                                        \
+    (bool)(((icup)->tim->DMAINTENR &                                                                                   \
+            (TIM_UIE | TIM_CC1IE | TIM_CC2IE | TIM_CC3IE | TIM_CC4IE | TIM_COMIE | TIM_TIE | TIM_BIE)) != 0)
 
 /*===========================================================================*/
 /* External declarations.                                                    */
 /*===========================================================================*/
 
-#if (CH32_ICU_USE_ICU1 == TRUE) && !defined(__DOXYGEN__)
+#if CH32_ICU_USE_TIM1 && !defined(__DOXYGEN__)
 extern ICUDriver ICUD1;
+#endif
+
+#if CH32_ICU_USE_TIM2 && !defined(__DOXYGEN__)
+extern ICUDriver ICUD2;
+#endif
+
+#if CH32_ICU_USE_TIM3 && !defined(__DOXYGEN__)
+extern ICUDriver ICUD3;
+#endif
+
+#if CH32_ICU_USE_TIM4 && !defined(__DOXYGEN__)
+extern ICUDriver ICUD4;
+#endif
+
+#if CH32_ICU_USE_TIM5 && !defined(__DOXYGEN__)
+extern ICUDriver ICUD5;
+#endif
+
+#if CH32_ICU_USE_TIM8 && !defined(__DOXYGEN__)
+extern ICUDriver ICUD8;
+#endif
+
+#if CH32_ICU_USE_TIM9 && !defined(__DOXYGEN__)
+extern ICUDriver ICUD9;
+#endif
+
+#if CH32_ICU_USE_TIM10 && !defined(__DOXYGEN__)
+extern ICUDriver ICUD10;
+#endif
+
+#if CH32_ICU_USE_TIM11 && !defined(__DOXYGEN__)
+extern ICUDriver ICUD11;
+#endif
+
+#if CH32_ICU_USE_TIM12 && !defined(__DOXYGEN__)
+extern ICUDriver ICUD12;
 #endif
 
 #ifdef __cplusplus

@@ -19,6 +19,28 @@
 #include "usbcfg.h"
 #include "chprintf.h"
 
+static const ICUConfig icucfg = {
+  .frequency = 100000,
+  .arr = 0,
+  .mode = ICU_INPUT_ACTIVE_HIGH,
+  .width_cb = NULL,
+  .period_cb = NULL,
+  .overflow_cb = NULL,
+  .dma_settings = 0
+};
+
+static THD_WORKING_AREA(waICUThread, 1024);
+static THD_FUNCTION(ICUThread, arg){
+    (void)arg;
+    chRegSetThreadName("ICUThread");
+    palSetPadMode(GPIOB, GPIO_PIN6, PAL_CH32_ALTERNATE_INPUT(2));
+    icuStart(&ICUD4, &icucfg);
+    icuStartCapture(&ICUD4);
+    while(true){
+        chThdSleepMilliseconds(500);
+    }
+}
+
 static const PWMConfig pwmgrpcfg = {
   .frequency = 10000,
   .period = 1000,
@@ -179,6 +201,7 @@ int main(void)
     chThdCreateStatic(waADCThread, sizeof(waADCThread), NORMALPRIO, ADCThread, NULL);
     chThdCreateStatic(waGPTThread, sizeof(waGPTThread), NORMALPRIO, GPTThread, NULL);
     chThdCreateStatic(waPWMThread, sizeof(waPWMThread), NORMALPRIO, PWMThread, NULL);
+    chThdCreateStatic(waICUThread, sizeof(waICUThread), NORMALPRIO, ICUThread, NULL);
 
     /*
      * Normal main() thread activity, in this demo it does nothing except
