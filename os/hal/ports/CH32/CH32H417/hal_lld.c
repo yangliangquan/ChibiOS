@@ -84,6 +84,151 @@ void hal_lld_init(void) {
   hal_lld_clock_switch_mode(&hal_clkcfg_default);
 }
 
+/* CTLR register bit mask */
+#define CTLR_HSEBYP_Reset          ((uint32_t)0xFFFBFFFF)
+#define CTLR_HSEBYP_Set            ((uint32_t)0x00040000)
+#define CTLR_HSEON_Reset           ((uint32_t)0xFFFEFFFF)
+#define CTLR_HSEON_Set             ((uint32_t)0x00010000)
+#define CTLR_HSITRIM_Mask          ((uint32_t)0xFFFFFF07)
+
+/* CFGR0 register bit mask */
+#define CFGR0_SWS_Mask             ((uint32_t)0x0000000C)
+#define CFGR0_SW_Mask              ((uint32_t)0xFFFFFFFC)
+#define CFGR0_HPRE_Set_Mask        ((uint32_t)0x000000F0)
+
+/* RSTSCKR register bit mask */
+#define RSTSCKR_RMVF_Set           ((uint32_t)0x01000000)
+
+/* RCC Flag Mask */
+#define FLAG_Mask                  ((uint8_t)0x1F)
+
+static __I uint8_t PLLMULTable[32] = {4,6,7,8,17,9,19,10,21,11,23,12,25,13,14,15,16,17,18,19,20,22,24,26,28,30,32,34,36,38,40,59};
+static __I uint8_t HBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
+static __I uint8_t SERDESPLLMULTable[16] = {25, 28, 30, 32, 35, 38, 40, 45, 50, 56, 60, 64, 70, 76, 80, 90};
+static __I uint8_t FPRETable[4] = {0, 1, 2, 2};
+static __I uint8_t PPRE2Table[8] = {0, 0, 0, 0, 1, 2, 3, 4};
+static __I uint8_t ADCPRETable[4] = {2, 4, 6, 8};
+void RCC_GetClocksFreq(RCC_ClocksTypeDef *RCC_Clocks)
+{
+    uint32_t tmp = 0,tmp1 = 0, tmp2 = 0, tmp3 = 0, pllmull = 0, pllsource = 0, presc = 0, presc1 = 0;
+
+    tmp = RCC->CFGR0 & CFGR0_SWS_Mask;
+    tmp2 = RCC->PLLCFGR & RCC_SYSPLL_SEL;
+
+    switch(tmp)
+    {
+        case 0x00:
+            RCC_Clocks->SYSCLK_Frequency = HSI_VALUE;
+            break;
+
+        case 0x04:
+            RCC_Clocks->SYSCLK_Frequency = HSE_VALUE;
+            break;
+
+        case 0x08:
+            switch(tmp2)
+            { 
+                case RCC_SYSPLL_PLL:
+                    pllmull = RCC->PLLCFGR & RCC_PLLMUL;
+                    pllsource = RCC->PLLCFGR & RCC_PLLSRC;
+                    presc = (((RCC->PLLCFGR & RCC_PLL_SRC_DIV) >> 8) + 1);
+
+                    if(pllsource == 0xA0)
+                    {
+                        tmp1 = 500000000 / presc;
+                    }
+                    else if(pllsource == 0xE0)
+                    {
+                        tmp1 = HSE_VALUE*SERDESPLLMULTable[RCC->PLLCFGR2>>16]/2/presc;
+                    }
+                    else if(pllsource == 0x80)
+                    {
+                        tmp1 = 480000000 / presc;
+                    }
+                    else if(pllsource == 0xC0)
+                    {
+                        tmp1 = 125000000 / presc;
+                    }
+                    else if(pllsource == 0x20)
+                    {
+                        tmp1 = HSE_VALUE / presc;
+                    }
+                    else
+                    {
+                        tmp1 = HSI_VALUE / presc;
+                    }
+
+                    if((pllmull == 4) || (pllmull == 6) || (pllmull == 8) || (pllmull == 10) || (pllmull == 12))
+                    {
+                        RCC_Clocks->SYSCLK_Frequency = (tmp1 * PLLMULTable[pllmull]) >> 1;
+                    }
+                    else
+                    {
+                        RCC_Clocks->SYSCLK_Frequency = tmp1 * PLLMULTable[pllmull];
+                    }
+                    break;
+
+                case RCC_SYSPLL_USBHS:
+                    RCC_Clocks->SYSCLK_Frequency = 480000000;
+                    break;
+
+                case RCC_SYSPLL_ETH:
+                    RCC_Clocks->SYSCLK_Frequency = 500000000;
+                    break;
+
+                case RCC_SYSPLL_SERDES:                  
+                    tmp1 = RCC->PLLCFGR2>>16;
+                    RCC_Clocks->SYSCLK_Frequency = HSE_VALUE*SERDESPLLMULTable[tmp1]/2;
+                    break;
+
+                case RCC_SYSPLL_USBSS:
+                    RCC_Clocks->SYSCLK_Frequency = 125000000;
+                    break;
+
+                default:
+                    RCC_Clocks->SYSCLK_Frequency = HSI_VALUE;
+                    break;
+            }  
+            break;
+
+        default:
+            RCC_Clocks->SYSCLK_Frequency = HSI_VALUE;
+            break;
+    }
+
+    tmp = (RCC->CFGR0 & CFGR0_HPRE_Set_Mask) >> 4;
+    presc1 = HBPrescTable[tmp];
+
+    tmp3 = RCC_Clocks->SYSCLK_Frequency >> presc1;
+  
+    tmp = (RCC->CFGR0 & RCC_FPRE) >> 16;
+    presc1 = FPRETable[tmp];
+    RCC_Clocks->HCLK_Frequency = tmp3 >> presc1;
+
+    if(NVIC_GetCurrentCoreID() == 0)//V3F
+    {
+        RCC_Clocks->Core_Frequency = RCC_Clocks->HCLK_Frequency;
+    }
+    else 
+    {
+        RCC_Clocks->Core_Frequency = tmp3;
+    }
+
+    if((RCC->CFGR0 & RCC_ADCSRC) == RCC_ADCSRC)
+    {
+        RCC_Clocks->ADCCLK_Frequency = 480000000 / (((RCC->CFGR0 & 0xF800) >> 11) + 5);
+    }
+    else
+    {
+        tmp = (RCC->CFGR0 & RCC_PPRE2) >> 11;
+        presc = PPRE2Table[tmp];
+        RCC_Clocks->ADCCLK_Frequency = RCC_Clocks->HCLK_Frequency >> presc;
+        tmp = (RCC->CFGR0 & RCC_ADCPRE) >> 14;
+        presc = ADCPRETable[tmp];
+        RCC_Clocks->ADCCLK_Frequency = RCC_Clocks->ADCCLK_Frequency / presc;  
+    }
+}
+
 #if defined(HAL_LLD_USE_CLOCK_MANAGEMENT) || defined(__DOXYGEN__)
 /**
  * @brief   Switches to a different clock configuration

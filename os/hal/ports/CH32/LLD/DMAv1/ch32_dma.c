@@ -738,8 +738,8 @@ void dmaServeInterrupt(const ch32_dma_stream_t *dmastp) {
   uint32_t selfindex = (uint32_t)dmastp->selfindex;
 
   flags = (dmastp->dma->INTFR >> dmastp->shift) & CH32_DMA_ISR_MASK;
-  if (flags & dmastp->channel->CFGR) {
-    dmastp->dma->INTFCR = flags << dmastp->shift;
+  if (flags & (dmastp->channel->CFGR)) {
+    dmastp->dma->INTFCR = 0xf << dmastp->shift;
     if (dma.streams[selfindex].func) {
       dma.streams[selfindex].func(dma.streams[selfindex].param, flags);
     }
@@ -761,8 +761,8 @@ void dmaSetRequestSource(const ch32_dma_stream_t *dmastp, uint32_t per) {
   osalDbgCheck(per < 256U);
 
   *(uint32_t *)(((uint32_t)&(dmastp->mux->CFGR0_3)) + ((dmastp->selfindex / 4) * 4)) =
-      ((*(uint32_t *)(((uint32_t)&(dmastp->mux->CFGR0_3)) + ((dmastp->selfindex / 4) * 4))) & ~(0b1111111)) |
-      ((per - 1) << dmastp->selfindex % 4);
+      ((*(uint32_t *)(((uint32_t)&(dmastp->mux->CFGR0_3)) + ((dmastp->selfindex / 4) * 4))) & ~(0b1111111 << ((dmastp->selfindex % 4) * 8))) |
+      ((per - 1) << ((dmastp->selfindex % 4) * 8));
 }
 #endif
 

@@ -76,7 +76,13 @@
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
 /*===========================================================================*/
-
+typedef struct
+{
+  uint32_t SYSCLK_Frequency;  /* returns SYSCLK clock frequency expressed in Hz */
+  uint32_t HCLK_Frequency;    /* returns HCLK/Core0 clock frequency expressed in Hz */
+  uint32_t Core_Frequency;   /* returns Core clock frequency expressed in Hz */
+  uint32_t ADCCLK_Frequency;  /* returns ADCCLK clock frequency expressed in Hz */
+}RCC_ClocksTypeDef;
 #if defined(HAL_LLD_USE_CLOCK_MANAGEMENT) || defined(__DOXYGEN__)
 /**
  * @brief   Type of a clock configuration structure.
@@ -119,6 +125,7 @@ extern const halclkcfg_t hal_clkcfg_default;
 extern "C" {
 #endif
   void hal_lld_init(void);
+  void RCC_GetClocksFreq(RCC_ClocksTypeDef *RCC_Clocks);
 #if defined(HAL_LLD_USE_CLOCK_MANAGEMENT) || defined(__DOXYGEN__)
   bool hal_lld_clock_switch_mode(const halclkcfg_t *ccp);
   halfreq_t hal_lld_get_clock_point(halclkpt_t clkpt);

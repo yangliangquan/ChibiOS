@@ -118,10 +118,10 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
             if((1U << i) & mask){
                 if(i < 8)
                 {
-                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                    *(uint32_t *)afioreg = (*(uint32_t *)afioreg & ~(0xF << ((i & 0xF) * 4))) | (((mode >> 8) & 0xF) << ((i & 0xF) * 4));
                 }else if(i < 16)
                 {
-                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                    *(uint32_t *)(afioreg + 4) = (*(uint32_t *)(afioreg + 4) & ~(0xF << (((i - 8) & 0xF) * 4))) | (((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4));
                 }
             }
         }
@@ -144,10 +144,10 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
             if((1U << i) & mask){
                 if(i < 8)
                 {
-                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                    *(uint32_t *)afioreg = (*(uint32_t *)afioreg & ~(0xF << ((i & 0xF) * 4))) | (((mode >> 8) & 0xF) << ((i & 0xF) * 4));
                 }else if(i < 16)
                 {
-                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                    *(uint32_t *)(afioreg + 4) = (*(uint32_t *)(afioreg + 4) & ~(0xF << (((i - 8) & 0xF) * 4))) | (((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4));
                 }
             }
         }
@@ -161,10 +161,10 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
             if((1U << i) & mask){
                 if(i < 8)
                 {
-                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                    *(uint32_t *)afioreg = (*(uint32_t *)afioreg & ~(0xF << ((i & 0xF) * 4))) | (((mode >> 8) & 0xF) << ((i & 0xF) * 4));
                 }else if(i < 16)
                 {
-                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                    *(uint32_t *)(afioreg + 4) = (*(uint32_t *)(afioreg + 4) & ~(0xF << (((i - 8) & 0xF) * 4))) | (((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4));
                 }
             }
         }
@@ -186,10 +186,10 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
             if((1U << i) & mask){
                 if(i < 8)
                 {
-                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                    *(uint32_t *)afioreg = (*(uint32_t *)afioreg & ~(0xF << ((i & 0xF) * 4))) | (((mode >> 8) & 0xF) << ((i & 0xF) * 4));
                 }else if(i < 16)
                 {
-                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                    *(uint32_t *)(afioreg + 4) = (*(uint32_t *)(afioreg + 4) & ~(0xF << (((i - 8) & 0xF) * 4))) | (((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4));
                 }
             }
         }
@@ -203,10 +203,10 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
             if((1U << i) & mask){
                 if(i < 8)
                 {
-                    *(uint32_t *)afioreg = ((mode >> 8) & 0xF) << ((i & 0xF) * 4);
+                    *(uint32_t *)afioreg = (*(uint32_t *)afioreg & ~(0xF << ((i & 0xF) * 4))) | (((mode >> 8) & 0xF) << ((i & 0xF) * 4));
                 }else if(i < 16)
                 {
-                    *(uint32_t *)(afioreg + 4) = ((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4);
+                    *(uint32_t *)(afioreg + 4) = (*(uint32_t *)(afioreg + 4) & ~(0xF << (((i - 8) & 0xF) * 4))) | (((mode >> 8) & 0xF) << (((i - 8) & 0xF) * 4));
                 }
             }
         }
@@ -231,15 +231,17 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
     for (int i = 15; i >= 8; i--)
     {
         _cfghrmask <<= 4;
-        if (mask & (1 << (i - 8)))
+        if (mask & (1 << (i)))
         {
             _cfghrmask |= 0xF;
         }
     }
 
-    p->CFGLR = (p->CFGLR & ~_cfghrmask) | (_cfghrmask & modeval);
+    p->CFGHR = (p->CFGHR & ~_cfghrmask) | (_cfghrmask & modeval);
 
     p->OUTDR = (p->OUTDR & ~mask) | (mask & odrval);
+
+    p->SPEED = 0xffffffff;
 }
 
 #if PAL_USE_CALLBACKS || PAL_USE_WAIT

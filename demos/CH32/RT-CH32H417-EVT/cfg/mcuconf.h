@@ -149,17 +149,30 @@
  */
 #define STM32_PWM_USE_RTC                   FALSE
 
+
+/*
+ * SIO driver system settings.
+ */
+#define CH32_SIO_USE_USART1             TRUE
+#define CH32_SIO_USE_USART2             FALSE
+#define CH32_SIO_USE_USART3             FALSE
+#define CH32_SIO_USE_USART4             FALSE
+#define CH32_SIO_USE_USART5             FALSE
+#define CH32_SIO_USE_USART6             FALSE
+#define CH32_SIO_USE_USART7             FALSE
+#define CH32_SIO_USE_USART8             FALSE
+
 /*
  * SERIAL driver system settings.
  */
-#define STM32_SERIAL_USE_USART1             FALSE
-#define STM32_SERIAL_USE_USART2             TRUE
-#define STM32_SERIAL_USE_USART3             FALSE
-#define STM32_SERIAL_USE_USART4             FALSE
-#define STM32_SERIAL_USE_USART5             FALSE
-#define STM32_SERIAL_USE_USART6             FALSE
-#define STM32_SERIAL_USE_USART7             FALSE
-#define STM32_SERIAL_USE_USART8             FALSE
+#define CH32_SERIAL_USE_USART1             FALSE
+#define CH32_SERIAL_USE_USART2             TRUE
+#define CH32_SERIAL_USE_USART3             FALSE
+#define CH32_SERIAL_USE_USART4             FALSE
+#define CH32_SERIAL_USE_USART5             FALSE
+#define CH32_SERIAL_USE_USART6             FALSE
+#define CH32_SERIAL_USE_USART7             FALSE
+#define CH32_SERIAL_USE_USART8             FALSE
 
 /*
  * ST driver system settings.
@@ -168,13 +181,13 @@
 /*
  * UART driver system settings.
  */
-#define STM32_UART_USE_USART1             FALSE
-#define STM32_UART_USE_USART2             TRUE
-#define STM32_UART_USE_USART3             FALSE
-#define STM32_UART_USE_USART4             FALSE
-#define STM32_UART_USE_USART5             FALSE
-#define STM32_UART_USE_USART6             FALSE
-#define STM32_UART_USE_USART7             FALSE
-#define STM32_UART_USE_USART8             FALSE
+#define CH32_UART_USE_USART1             FALSE
+#define CH32_UART_USE_USART2             FALSE
+#define CH32_UART_USE_USART3             TRUE
+#define CH32_UART_USE_USART4             FALSE
+#define CH32_UART_USE_USART5             FALSE
+#define CH32_UART_USE_USART6             FALSE
+#define CH32_UART_USE_USART7             FALSE
+#define CH32_UART_USE_USART8             FALSE
 
 #endif /* MCUCONF_H */

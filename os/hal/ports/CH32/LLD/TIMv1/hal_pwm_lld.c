@@ -405,7 +405,9 @@ void pwm_lld_init(void) {
  * @notapi
  */
 void pwm_lld_start(PWMDriver *pwmp) {
-  uint32_t clock = hal_lld_get_clock_point((halclkpt_t)NULL);
+  RCC_ClocksTypeDef RCC_Clocks;
+  RCC_GetClocksFreq(&RCC_Clocks);
+  uint32_t clock = RCC_Clocks.HCLK_Frequency;
   if (pwmp->state == PWM_STOP) {
     /* Clock activation and timer reset.*/
 #if CH32_PWM_USE_TIM1 == TRUE

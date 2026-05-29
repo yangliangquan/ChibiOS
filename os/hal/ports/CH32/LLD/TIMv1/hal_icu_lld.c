@@ -380,7 +380,9 @@ void icu_lld_init(void) {
  * @notapi
  */
 void icu_lld_start(ICUDriver *icup) {
-  uint32_t clock = hal_lld_get_clock_point((halclkpt_t)NULL);
+  RCC_ClocksTypeDef RCC_Clocks;
+  RCC_GetClocksFreq(&RCC_Clocks);
+  uint32_t clock = RCC_Clocks.HCLK_Frequency;
   if (icup->state == ICU_STOP) {
     /* Clock activation and timer reset.*/
 #if CH32_ICU_USE_TIM1 == TRUE
