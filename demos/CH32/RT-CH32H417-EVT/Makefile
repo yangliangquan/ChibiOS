@@ -99,7 +99,7 @@ DEPDIR   := ./.dep
 # Licensing files.
 include $(CHIBIOS)/os/license/license.mk
 # Startup files.
-include $(CHIBIOS)/os/common/startup/RISCV-QINGKE/compilers/GCC/mk/startup_ch32h417.mk
+include $(CHIBIOS)/os/common/startup/RISCV-QINGKE/CH32H417/V3F/mk/startup.mk
 # HAL-OSAL files (optional).
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/hal/ports/CH32/CH32H417/platform.mk
@@ -108,7 +108,7 @@ include $(CHIBIOS)/os/hal/osal/rt-nil/osal.mk
 
 # RTOS files (optional).
 include $(CHIBIOS)/os/rt/rt.mk
-include $(CHIBIOS)/os/common/ports/RISCV-QINGKE/compilers/GCC/mk/port.mk
+include $(CHIBIOS)/os/common/ports/RISCV-QINGKE/V3F/compilers/GCC/mk/port.mk
 # Auto-build files in ./source recursively.
 include $(CHIBIOS)/tools/mk/autobuild.mk
 # Other files (optional).
@@ -119,7 +119,7 @@ include $(CHIBIOS)/test/rt/rt_test.mk
 include $(CHIBIOS)/test/oslib/oslib_test.mk
 
 # Define linker script file here
-LDSCRIPT= $(STARTUPLD)/Link_v3f.ld
+LDSCRIPT= $(STARTUPLD)/Link.ld
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.

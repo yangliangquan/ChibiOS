@@ -15,8 +15,8 @@
 */
 
 /**
- * @file    hal_st_lld.h
- * @brief   CH32 ST subsystem low level driver header.
+ * @file    STv3f/hal_st_lld.h
+ * @brief   CH32H417 V3F core ST subsystem low level driver header.
  * @details This header is designed to be include-able without having to
  *          include other files from the HAL.
  *

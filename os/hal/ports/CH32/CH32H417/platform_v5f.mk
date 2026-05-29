@@ -1,4 +1,4 @@
-# List of all the CH32H417 V3F platform files.
+# List of all the CH32H417 V5F platform files.
 ifeq ($(USE_SMART_BUILD),yes)
 
 # Configuration files directory
@@ -9,7 +9,7 @@ endif
 HALCONF := $(strip $(shell cat $(CONFDIR)/halconf.h | egrep -e "\#define"))
 
 PLATFORMSRC := ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c
-PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f/hal_st_lld.c
+PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv5f/hal_st_lld.c
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1/ch32_dma.c
 ifneq ($(findstring HAL_USE_ADC TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/ADCv1/hal_adc_lld.c
@@ -79,7 +79,7 @@ PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1/hal_wspi_lld.c
 endif
 else
 PLATFORMSRC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c \
-              ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f/hal_st_lld.c \
+              ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv5f/hal_st_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1/ch32_dma.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/ADCv1/hal_adc_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/CANv1/hal_can_lld.c \
@@ -107,7 +107,7 @@ endif
 
 # Required include directories
 PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
-              ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f \
+              ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv5f \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/ADCv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/CANv1 \

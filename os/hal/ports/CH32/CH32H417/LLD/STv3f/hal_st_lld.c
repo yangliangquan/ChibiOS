@@ -15,8 +15,8 @@
 */
 
 /**
- * @file    hal_st_lld.c
- * @brief   CH32 ST subsystem low level driver source.
+ * @file    STv3f/hal_st_lld.c
+ * @brief   CH32H417 V3F core ST subsystem low level driver source.
  *
  * @addtogroup ST
  * @{

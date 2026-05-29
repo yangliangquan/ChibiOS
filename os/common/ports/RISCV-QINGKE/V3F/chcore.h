@@ -29,7 +29,7 @@
 #ifndef CHCORE_H
 #define CHCORE_H
 
-/* Inclusion of the RISC-V implementation specific parameters.*/
+/* Inclusion of the RISC-V V3F implementation specific parameters.*/
 #include "riscvparams.h"
 
 /*===========================================================================*/
