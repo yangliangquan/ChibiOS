@@ -4,13 +4,15 @@ __stack_size = 2048;
 
 PROVIDE( _stack_size = __stack_size );
 
+
 MEMORY
 {
-/* TODO: Update memory regions for V5F core memory map */
-	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 128K
-	RAM_CODE (xrw) : ORIGIN = 0x20100000, LENGTH = 128K
-	RAM (xrw) : ORIGIN = (0x20120000+1024), LENGTH = (448K-1024-64K)
-	RAM_LOAD (xrw) : ORIGIN = 0x20120000, LENGTH = 1024
+	/*FLASH, RAM, and RAM-CODE can be freely configured according to project 
+	requirements;Please refer to the datasheet manual for specific allocation*/
+	FLASH (rx) : ORIGIN = 0x00010000, LENGTH = 128K                    /* zero_wait flah ,and loaded into RAM_CODE for running */
+	RAM_CODE (xrw) : ORIGIN = 0x200A0000, LENGTH = 128K                /*ITCM RAM for running code*/
+	RAM (xrw) : ORIGIN = (0x200C0000+512+256), LENGTH = (256K-512-256) /*DTCM RAM for .data .bss section and other*/ 
+	RAM_LOAD (xrw) : ORIGIN = (0x200C0000+512), LENGTH = 256           /* RAM for .load section*/
 }
 
 SECTIONS
@@ -35,7 +37,6 @@ SECTIONS
 		. = ALIGN(4);
         PROVIDE(_loadcode_vma_start = .);
 		*(.load);
-		KEEP(*(SORT_NONE(.handle_reset)))
 		. = ALIGN(4); 
 		PROVIDE(_loadcode_vma_end = .);
 	}>RAM_LOAD AT>FLASH
@@ -48,20 +49,15 @@ SECTIONS
     
     .highcode : 
     {
-        . = ALIGN(1024);
+        . = ALIGN(4);
         PROVIDE(_highcode_vma_start = .);
-		*(.irq_entry);
-		. = ALIGN(4);
 		PROVIDE(vector_start = .);
-        KEEP(*(.vector))
-		PROVIDE(__text_base__ = .);
+        *(.vector);
+		KEEP(*(SORT_NONE(.vector_handler)))
 		*(.text)
 		*(.text.*)
-		PROVIDE(__text_end__ = .);
-		PROVIDE(__rodata_base__ = .);
 		*(.rodata)
 		*(.rodata*)
-		PROVIDE(__rodata_end__ = .);
         *(.sdata2.*)
 		*(.glue_7)
 		*(.glue_7t)
@@ -72,6 +68,9 @@ SECTIONS
 
 	.text :
 	{
+		. = ALIGN(4);
+		KEEP(*(SORT_NONE(.handle_reset)))
+		. = ALIGN(4);
 	} >FLASH AT>FLASH 
 
     .highcodelalign1 : 
@@ -116,8 +115,21 @@ SECTIONS
 	
 	.ctors          :
 	{
+	  /* gcc uses crtbegin.o to find the start of
+	     the constructors, so we make sure it is
+	     first.  Because this is a wildcard, it
+	     doesn't matter if the user does not
+	     actually link against crtbegin.o; the
+	     linker won't look for a file to match a
+	     wildcard.  The wildcard also means that it
+	     doesn't matter which directory crtbegin.o
+	     is in.  */
 	  KEEP (*crtbegin.o(.ctors))
 	  KEEP (*crtbegin?.o(.ctors))
+	  /* We don't want to include the .ctor section from
+	     the crtend.o file until after the sorted ctors.
+	     The .ctor section from the crtend file contains the
+	     end of ctors marker and it must be last */
 	  KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))
 	  KEEP (*(SORT(.ctors.*)))
 	  KEEP (*(.ctors))
@@ -150,9 +162,7 @@ SECTIONS
 	{
 		. = ALIGN(4);
     	*(.gnu.linkonce.r.*)
-		PROVIDE(__data_base__ = .);
     	*(.data .data.*)
-		PROVIDE(__data_end__ = .);
     	*(.gnu.linkonce.d.*)
 		. = ALIGN(8);
     	PROVIDE( __global_pointer$ = . + 0x800 );
@@ -175,9 +185,7 @@ SECTIONS
 		PROVIDE( _sbss = .);
   	    *(.sbss*)
         *(.gnu.linkonce.sb.*)
-		PROVIDE(__bss_base__ = .);
 		*(.bss*)
-		PROVIDE(__bss_end__ = .);
      	*(.gnu.linkonce.b.*)		
 		*(COMMON*)
 		. = ALIGN(4);
@@ -186,13 +194,12 @@ SECTIONS
 
 	PROVIDE( _end = _ebss);
 	PROVIDE( end = . );
-	PROVIDE( __heap_base__ = . );
+	PROVIDE(__heap_base__ = .);
 
     .stack ORIGIN(RAM) + LENGTH(RAM) - __stack_size :
     {
-        PROVIDE( _heap_end = . );
-		PROVIDE( __heap_end__ = . );
-
+        PROVIDE( _heap_end = . );    
+		PROVIDE(__heap_end__ = .);
         . = ALIGN(4);
         PROVIDE(_susrstack = . );
 		PROVIDE( __process_stack_base__ = . );
@@ -204,3 +211,6 @@ SECTIONS
     } >RAM 
 
 }
+
+
+
