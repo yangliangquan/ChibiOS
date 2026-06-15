@@ -25,6 +25,8 @@
 #ifndef HAL_SPI_LLD_H
 #define HAL_SPI_LLD_H
 
+#include "ch32_dma.h"
+
 #if (HAL_USE_SPI == TRUE) || defined(__DOXYGEN__)
 
 /*===========================================================================*/
@@ -52,11 +54,167 @@
 #if !defined(CH32_SPI_USE_SPI1) || defined(__DOXYGEN__)
 #define CH32_SPI_USE_SPI1                  FALSE
 #endif
+
+/**
+ * @brief   SPI2 driver enable switch.
+ * @details If set to @p TRUE the support for SPI2 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_SPI_USE_SPI2) || defined(__DOXYGEN__)
+#define CH32_SPI_USE_SPI2                  FALSE
+#endif
+
+/**
+ * @brief   SPI3 driver enable switch.
+ * @details If set to @p TRUE the support for SPI3 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_SPI_USE_SPI3) || defined(__DOXYGEN__)
+#define CH32_SPI_USE_SPI3                  FALSE
+#endif
+
+/**
+ * @brief   SPI4 driver enable switch.
+ * @details If set to @p TRUE the support for SPI4 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_SPI_USE_SPI4) || defined(__DOXYGEN__)
+#define CH32_SPI_USE_SPI4                  FALSE
+#endif
+
+/**
+ * @brief   SPI1 DMA priority.
+ * @note    The default is @p 3 which correspond to the highest priority.
+ */
+#if !defined(CH32_SPI_SPI1_DMA_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI1_DMA_PRIORITY         3
+#endif
+
+/**
+ * @brief   SPI2 DMA priority.
+ * @note    The default is @p 3 which correspond to the highest priority.
+ */
+#if !defined(CH32_SPI_SPI2_DMA_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI2_DMA_PRIORITY         3
+#endif
+
+/**
+ * @brief   SPI3 DMA priority.
+ * @note    The default is @p 3 which correspond to the highest priority.
+ */
+#if !defined(CH32_SPI_SPI3_DMA_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI3_DMA_PRIORITY         3
+#endif
+
+/**
+ * @brief   SPI4 DMA priority.
+ * @note    The default is @p 3 which correspond to the highest priority.
+ */
+#if !defined(CH32_SPI_SPI4_DMA_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI4_DMA_PRIORITY         3
+#endif
+
+/**
+ * @brief   SPI1 interrupt priority.
+ */
+#if !defined(CH32_SPI_SPI1_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI1_IRQ_PRIORITY         10
+#endif
+
+/**
+ * @brief   SPI2 interrupt priority.
+ */
+#if !defined(CH32_SPI_SPI2_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI2_IRQ_PRIORITY         10
+#endif
+
+/**
+ * @brief   SPI3 interrupt priority.
+ */
+#if !defined(CH32_SPI_SPI3_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI3_IRQ_PRIORITY         10
+#endif
+
+/**
+ * @brief   SPI4 interrupt priority.
+ */
+#if !defined(CH32_SPI_SPI4_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI4_IRQ_PRIORITY         10
+#endif
+
+/**
+ * @brief   SPI1 RX DMA stream ID.
+ */
+#if !defined(CH32_SPI_SPI1_RX_DMA_STREAM) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI1_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#endif
+
+/**
+ * @brief   SPI1 TX DMA stream ID.
+ */
+#if !defined(CH32_SPI_SPI1_TX_DMA_STREAM) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI1_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#endif
+
+/**
+ * @brief   SPI2 RX DMA stream ID.
+ */
+#if !defined(CH32_SPI_SPI2_RX_DMA_STREAM) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI2_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#endif
+
+/**
+ * @brief   SPI2 TX DMA stream ID.
+ */
+#if !defined(CH32_SPI_SPI2_TX_DMA_STREAM) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI2_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#endif
+
+/**
+ * @brief   SPI3 RX DMA stream ID.
+ */
+#if !defined(CH32_SPI_SPI3_RX_DMA_STREAM) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI3_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#endif
+
+/**
+ * @brief   SPI3 TX DMA stream ID.
+ */
+#if !defined(CH32_SPI_SPI3_TX_DMA_STREAM) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI3_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#endif
+
+/**
+ * @brief   SPI4 RX DMA stream ID.
+ */
+#if !defined(CH32_SPI_SPI4_RX_DMA_STREAM) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI4_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#endif
+
+/**
+ * @brief   SPI4 TX DMA stream ID.
+ */
+#if !defined(CH32_SPI_SPI4_TX_DMA_STREAM) || defined(__DOXYGEN__)
+#define CH32_SPI_SPI4_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#endif
+
+/**
+ * @brief   DMA error hook.
+ */
+#if !defined(CH32_SPI_DMA_ERROR_HOOK) || defined(__DOXYGEN__)
+#define CH32_SPI_DMA_ERROR_HOOK(spip)                                         \
+  osalSysHalt("DMA failure")
+#endif
 /** @} */
 
 /*===========================================================================*/
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
+
+/* DMA driver requirement.*/
+#if !defined(CH32_DMA_REQUIRED)
+#define CH32_DMA_REQUIRED                  TRUE
+#endif
 
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
@@ -70,15 +228,25 @@
  * @brief   Low level fields of the SPI driver structure.
  */
 #define spi_lld_driver_fields                                               \
-  /* Dummy field, it is not needed.*/                                       \
-  uint32_t                  dummy;
+  /* SPI peripheral register base address.*/                                \
+  SPI_TypeDef               *spi;                                           \
+  /* RX DMA stream pointer.*/                                               \
+  const ch32_dma_stream_t   *dmarx;                                         \
+  /* TX DMA stream pointer.*/                                               \
+  const ch32_dma_stream_t   *dmatx;                                         \
+  /* RX DMA mode value.*/                                                   \
+  uint32_t                  rxdmamode;                                      \
+  /* TX DMA mode value.*/                                                   \
+  uint32_t                  txdmamode;
 
 /**
  * @brief   Low level fields of the SPI configuration structure.
  */
 #define spi_lld_config_fields                                               \
-  /* Dummy configuration, it is not needed.*/                               \
-  uint32_t                  dummy;
+  /* Initial value for the CTLR1 register.*/                                \
+  uint16_t                  cr1;                                            \
+  /* Initial value for the CTLR2 register.*/                                \
+  uint16_t                  cr2;
 
 /*===========================================================================*/
 /* External declarations.                                                    */
@@ -86,6 +254,18 @@
 
 #if (CH32_SPI_USE_SPI1 == TRUE) && !defined(__DOXYGEN__)
 extern SPIDriver SPID1;
+#endif
+
+#if (CH32_SPI_USE_SPI2 == TRUE) && !defined(__DOXYGEN__)
+extern SPIDriver SPID2;
+#endif
+
+#if (CH32_SPI_USE_SPI3 == TRUE) && !defined(__DOXYGEN__)
+extern SPIDriver SPID3;
+#endif
+
+#if (CH32_SPI_USE_SPI4 == TRUE) && !defined(__DOXYGEN__)
+extern SPIDriver SPID4;
 #endif
 
 #ifdef __cplusplus

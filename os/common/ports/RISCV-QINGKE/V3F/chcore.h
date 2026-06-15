@@ -72,12 +72,12 @@
 /**
  * @brief   Lowest priority level.
  */
-#define PORT_LOWEST_PRIORITY            0
+#define PORT_LOWEST_PRIORITY            256
 
 /**
  * @brief   Highest priority level.
  */
-#define PORT_HIGHEST_PRIORITY           1
+#define PORT_HIGHEST_PRIORITY           0
 
 /**
  * @brief   Register number of the interrupt vector register.

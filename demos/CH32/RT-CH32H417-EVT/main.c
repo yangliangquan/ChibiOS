@@ -72,7 +72,7 @@ static THD_WORKING_AREA(waPWMThread, 1024);
 static THD_FUNCTION(PWMThread, arg){
     (void)arg;
     chRegSetThreadName("PWMThread");
-    palSetPadMode(GPIOA, GPIO_PIN6, PAL_CH32_ALTERNATE_PUSHPULL(2));
+    palSetPadMode(GPIOB, GPIO_PIN4, PAL_CH32_ALTERNATE_PUSHPULL(2));
     pwmStart(&PWMD3, &pwmgrpcfg);
     static uint16_t duty = 0;
     while(true){
@@ -320,6 +320,220 @@ uint32_t last_rx_count = 0;
   }
 }
 
+/*===========================================================================*/
+/* I2C driver related.                                                       */
+/*===========================================================================*/
+
+/*
+ * I2C1 test configuration.
+ * Standard mode (100kHz), 7-bit addressing.
+ */
+static const I2CConfig i2c1_cfg = {
+  .clock_speed = 100000,
+  .duty_cycle  = FAST_DUTY_CYCLE_2,
+  .op_mode     = OPMODE_I2C,
+};
+
+/*
+ * I2C slave address for testing (e.g., EEPROM or sensor).
+ * 0x50 is a common EEPROM address (e.g., AT24Cxx series).
+ */
+#define I2C_TEST_SLAVE_ADDR             0x50
+#define I2C_EEPROM_MEM_ADDR             0x0000
+
+static THD_WORKING_AREA(waI2CThread, 1024);
+static THD_FUNCTION(I2CThread, arg) {
+  (void)arg;
+  chRegSetThreadName("I2CThread");
+
+  /* Configure I2C1 pins: PB6(SCL), PB7(SDA), AF4 for I2C1 on CH32H417.*/
+  palSetPadMode(GPIOB, GPIO_PIN6, PAL_CH32_ALTERNATE_OPENDRAIN(4));
+  palSetPadMode(GPIOB, GPIO_PIN7, PAL_CH32_ALTERNATE_OPENDRAIN(4));
+
+  /* Start I2C1.*/
+  i2cStart(&I2CD1, &i2c1_cfg);
+
+  /*
+   * I2C test buffer.
+   * Simulate a write to an I2C EEPROM:
+   *   - First two bytes: memory address (0x0000)
+   *   - Following bytes: data to write
+   */
+  uint8_t write_data[4] = {0xAA, 0xBB, 0xCC, 0xDD};
+  uint8_t read_back[4];
+  msg_t status;
+  uint32_t pass_count = 0;
+  uint32_t fail_count = 0;
+
+  while (true) {
+    /* Build transmit buffer: [addr_hi][addr_lo][data...].*/
+    uint8_t tx_buf[6];
+    tx_buf[0] = (uint8_t)(I2C_EEPROM_MEM_ADDR >> 8);
+    tx_buf[1] = (uint8_t)(I2C_EEPROM_MEM_ADDR & 0xFF);
+    tx_buf[2] = write_data[0];
+    tx_buf[3] = write_data[1];
+    tx_buf[4] = write_data[2];
+    tx_buf[5] = write_data[3];
+
+    /* Perform write: send memory address + data to EEPROM.*/
+    status = i2cMasterTransmitTimeout(&I2CD1, I2C_TEST_SLAVE_ADDR,
+                                       tx_buf, 6,
+                                       NULL, 0,
+                                       TIME_MS2I(100));
+
+    if (status == MSG_OK) {
+      /* Write succeeded, wait for EEPROM write cycle.*/
+      chThdSleepMilliseconds(10);
+
+      /* Read back by writing memory address, then reading data.*/
+      status = i2cMasterTransmitTimeout(&I2CD1, I2C_TEST_SLAVE_ADDR,
+                                         tx_buf, 2,   /* addr only */
+                                         read_back, 4, /* read 4 bytes */
+                                         TIME_MS2I(100));
+      if (status == MSG_OK) {
+        /* Verify read-back data matches what was written.*/
+        if ((read_back[0] == write_data[0]) &&
+            (read_back[1] == write_data[1]) &&
+            (read_back[2] == write_data[2]) &&
+            (read_back[3] == write_data[3])) {
+
+          pass_count++;
+          /* Toggle PD4 (orange LED) fast on success.*/
+          palTogglePad(GPIOD, GPIO_PIN4);
+        }
+        else {
+          fail_count++;
+          /* Data mismatch - set PD4 steady on error.*/
+          palSetPad(GPIOD, GPIO_PIN4);
+        }
+      }
+      else {
+        fail_count++;
+      }
+    }
+    else {
+      fail_count++;
+      /* Write failed (no ACK) - likely no device on bus.*/
+      palSetPad(GPIOD, GPIO_PIN4);
+    }
+
+    chThdSleepMilliseconds(2000);
+  }
+}
+
+  
+/*===========================================================================*/
+/* SPI driver related.                                                       */
+/*===========================================================================*/
+
+/*
+ * SPI1 configuration structure.
+ * Master mode, 8-bit data, CPOL=0, CPHA=0, baud rate = APB2 / 8.
+ * CH32 SPI1 is on HB2 bus (APB2-like), clock = HCLK / HPRE.
+ * With default HPRE_DIV4: 96MHz / 4 = 24MHz on APB2.
+ * BR_1 (bit 4) gives divider of 8: SPI clock = 24MHz / 8 = 3MHz.
+ */
+static const SPIConfig spi1_cfg = {
+  .cr1   = SPI_CTLR1_BR_1,                     /* 3MHz @ 24MHz APB2 */
+  .cr2   = 0U,                                  /* No extra features */
+};
+
+static THD_WORKING_AREA(waSPIThread, 1024);
+static THD_FUNCTION(SPIThread, arg) {
+  (void)arg;
+  chRegSetThreadName("SPIThread");
+
+  /* Configure SPI1 pins: PA5(SCK), PA6(MISO), PA7(MOSI), AF5 on CH32H417.*/
+  palSetPadMode(GPIOA, GPIO_PIN5, PAL_CH32_ALTERNATE_PUSHPULL(5));
+  palSetPadMode(GPIOA, GPIO_PIN6, PAL_CH32_ALTERNATE_INPUT(5));
+  palSetPadMode(GPIOA, GPIO_PIN7, PAL_CH32_ALTERNATE_PUSHPULL(5));
+
+  /* Start SPI1.*/
+  spiStart(&SPID1, &spi1_cfg);
+
+  // uint16_t tx_val = 0xA5;
+  // uint16_t rx_val;
+  // uint32_t xfer_count = 0;
+
+  while (true) {
+    // /* Perform polled exchange. For a self-test without external wiring,
+    //    connect PA6 (MISO) to PA7 (MOSI) with a jumper on the EVT board. */
+    // rx_val = spiPolledExchange(&SPID1, tx_val);
+
+    // /* Simple check: in loopback mode, received value should match.*/
+    // if (rx_val == tx_val) {
+    //   /* SPI OK - toggle PD4 LED (orange) slowly.*/
+    //   palTogglePad(GPIOD, GPIO_PIN4);
+    //   xfer_count++;
+    // }
+
+    // /* Increment test pattern.*/
+    // tx_val++;
+
+    uint8_t tx_buf[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    uint8_t rx_buf[16];
+    spiExchange(&SPID1, sizeof(tx_buf), tx_buf, rx_buf);
+
+    chThdSleepMilliseconds(2000);
+  }
+}
+
+/*===========================================================================*/
+/* I2S driver related.                                                       */
+/*===========================================================================*/
+
+/*
+ * I2S1 test: master TX, 16-bit data, 44.1kHz sample rate.
+ * I2SDIV = 2, ODD = 0, MCKOE = 0.
+ * For I2S master mode: I2SxCLK = (HCLK/HPRE) / (I2SDIV*2 + ODD) / 2
+ * With HPRE_DIV4 and 96MHz: APB2 = 24MHz.
+ * I2S clock = 24MHz / (2*2) / 2 = 3MHz bit clock.
+ * Sample rate = bit clock / (16*2) = 3000000 / 32 = 93750 Hz.
+ * Using I2SDIV=8, ODD=0: 24MHz / 16 / 2 = 750kHz bit clock.
+ * Sample rate = 750000 / 32 = 23437 Hz.
+ */
+#define I2S_SAMPLE_RATE             24000
+#define I2S_BUFFER_SIZE             256
+
+static uint16_t i2s_tx_buf[I2S_BUFFER_SIZE];
+
+static const I2SConfig i2s2_cfg = {
+  .tx_buffer  = i2s_tx_buf,
+  .rx_buffer  = NULL,
+  .size       = I2S_BUFFER_SIZE,
+  .end_cb     = NULL,
+  .i2scfgr    = SPI_I2SCFGR_DATLEN_0,      /* 24-bit data, CHLEN=0 -> 32-bit frame */
+  .i2spr      = (8 << 0) |                  /* I2SDIV = 8 */
+                (0 << 8) |                  /* ODD = 0 */
+                (0 << 9),                   /* MCKOE = 0 */
+};
+
+static THD_WORKING_AREA(waI2SThread, 1024);
+static THD_FUNCTION(I2SThread, arg) {
+  (void)arg;
+  chRegSetThreadName("I2SThread");
+
+  /* Configure I2S1 pins: PA5(CK), PA7(SD), PA4(WS), AF5 on CH32H417.*/
+  palSetPadMode(GPIOB, GPIO_PIN13, PAL_CH32_ALTERNATE_PUSHPULL(5));
+  palSetPadMode(GPIOB, GPIO_PIN15, PAL_CH32_ALTERNATE_PUSHPULL(5));
+  palSetPadMode(GPIOB, GPIO_PIN12, PAL_CH32_ALTERNATE_PUSHPULL(5));
+
+  /* Generate a simple sine wave pattern for testing.*/
+  for (uint32_t i = 0; i < I2S_BUFFER_SIZE; i++) {
+    i2s_tx_buf[i] = (uint16_t)(0x5000 + ((i * 200) & 0x7FFF));
+  }
+
+  /* Start I2S1.*/
+  i2sStart(&I2SD2, &i2s2_cfg);
+
+  /* Start continuous exchange (circular DMA).*/
+  i2sStartExchange(&I2SD2);
+
+  while (true) {
+    chThdSleepMilliseconds(1000);
+  }
+}
+
 static void cmd_hello(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void)argc;
   (void)argv;
@@ -381,6 +595,10 @@ int main(void)
     chThdCreateStatic(waSIOThread, sizeof(waSIOThread), NORMALPRIO, SIOThread, NULL);
     chThdCreateStatic(waSerialThread, sizeof(waSerialThread), NORMALPRIO, SerialThread, NULL);
     chThdCreateStatic(waUARTThread, sizeof(waUARTThread), NORMALPRIO, UARTThread, NULL);
+    chThdCreateStatic(waSPIThread, sizeof(waSPIThread), NORMALPRIO, SPIThread, NULL);
+    // chThdCreateStatic(waI2CThread, sizeof(waI2CThread), NORMALPRIO, I2CThread, NULL);
+    chThdCreateStatic(waI2SThread, sizeof(waI2SThread), NORMALPRIO, I2SThread, NULL);
+    chThdCreateStatic(waDACThread, sizeof(waDACThread), NORMALPRIO, DACThread, NULL);
 
     /*
      * Normal main() thread activity, in this demo it does nothing except

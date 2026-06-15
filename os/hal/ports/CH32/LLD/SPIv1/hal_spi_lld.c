@@ -30,6 +30,20 @@
 /* Driver local definitions.                                                 */
 /*===========================================================================*/
 
+/**
+ * @brief   Combined PSIZE and MSIZE mask used for clearing size bits.
+ */
+#define CH32_SPI_DMA_SIZE_MASK            (DMA_PeripheralDataSize_Word |    \
+                                           DMA_MemoryDataSize_Word)
+
+/**
+ * @brief   DMA priority level mapping.
+ */
+#define CH32_SPI_DMA_PRIORITY_0           DMA_Priority_Low
+#define CH32_SPI_DMA_PRIORITY_1           DMA_Priority_Medium
+#define CH32_SPI_DMA_PRIORITY_2           DMA_Priority_High
+#define CH32_SPI_DMA_PRIORITY_3           DMA_Priority_VeryHigh
+
 /*===========================================================================*/
 /* Driver exported variables.                                                */
 /*===========================================================================*/
@@ -41,13 +55,98 @@
 SPIDriver SPID1;
 #endif
 
+/**
+ * @brief   SPI2 driver identifier.
+ */
+#if (CH32_SPI_USE_SPI2 == TRUE) || defined(__DOXYGEN__)
+SPIDriver SPID2;
+#endif
+
+/**
+ * @brief   SPI3 driver identifier.
+ */
+#if (CH32_SPI_USE_SPI3 == TRUE) || defined(__DOXYGEN__)
+SPIDriver SPID3;
+#endif
+
+/**
+ * @brief   SPI4 driver identifier.
+ */
+#if (CH32_SPI_USE_SPI4 == TRUE) || defined(__DOXYGEN__)
+SPIDriver SPID4;
+#endif
+
 /*===========================================================================*/
 /* Driver local variables and types.                                         */
 /*===========================================================================*/
 
+/**
+ * @brief   Dummy data used for half-duplex transfers.
+ */
+static const uint16_t dummytx = 0xFFFFU;
+static uint16_t dummyrx;
+
 /*===========================================================================*/
 /* Driver local functions.                                                   */
 /*===========================================================================*/
+
+/**
+ * @brief   Shared end-of-rx service routine.
+ *
+ * @param[in] spip      pointer to the @p SPIDriver object
+ * @param[in] flags     pre-shifted content of the ISR register
+ */
+static void spi_lld_serve_rx_interrupt(SPIDriver *spip, uint32_t flags) {
+
+  /* DMA errors handling.*/
+#if defined(CH32_SPI_DMA_ERROR_HOOK)
+  if ((flags & (DMA_CFGR1_TEIE)) != 0) {
+    CH32_SPI_DMA_ERROR_HOOK(spip);
+  }
+#else
+  (void)flags;
+#endif
+
+  if (spip->config->circular) {
+    if ((flags & DMA_CFGR1_HTIE) != 0U) {
+      /* Half buffer interrupt.*/
+      _spi_isr_half_code(spip);
+    }
+    if ((flags & DMA_CFGR1_TCIE) != 0U) {
+      /* End buffer interrupt.*/
+      _spi_isr_full_code(spip);
+    }
+  }
+  else {
+    /* Stopping DMAs.*/
+    dmaStreamDisable(spip->dmatx);
+    dmaStreamDisable(spip->dmarx);
+
+    /* Portable SPI ISR code defined in the high level driver, note, it is
+       a macro.*/
+    _spi_isr_code(spip);
+  }
+}
+
+/**
+ * @brief   Shared end-of-tx service routine.
+ *
+ * @param[in] spip      pointer to the @p SPIDriver object
+ * @param[in] flags     pre-shifted content of the ISR register
+ */
+static void spi_lld_serve_tx_interrupt(SPIDriver *spip, uint32_t flags) {
+
+  /* DMA errors handling.*/
+#if defined(CH32_SPI_DMA_ERROR_HOOK)
+  (void)spip;
+  if ((flags & DMA_CFGR1_TEIE) != 0) {
+    CH32_SPI_DMA_ERROR_HOOK(spip);
+  }
+#else
+  (void)spip;
+  (void)flags;
+#endif
+}
 
 /*===========================================================================*/
 /* Driver interrupt handlers.                                                */
@@ -64,9 +163,40 @@ SPIDriver SPID1;
  */
 void spi_lld_init(void) {
 
-#if CH32_SPI_USE_SPI1 == TRUE
-  /* Driver initialization.*/
+#if CH32_SPI_USE_SPI1
   spiObjectInit(&SPID1);
+  SPID1.spi       = SPI1;
+  SPID1.dmarx     = NULL;
+  SPID1.dmatx     = NULL;
+  SPID1.rxdmamode = DMA_CFGR1_TCIE | DMA_CFGR1_TEIE;
+  SPID1.txdmamode = DMA_CFGR1_TEIE;
+#endif
+
+#if CH32_SPI_USE_SPI2
+  spiObjectInit(&SPID2);
+  SPID2.spi       = SPI2;
+  SPID2.dmarx     = NULL;
+  SPID2.dmatx     = NULL;
+  SPID2.rxdmamode = DMA_CFGR1_TCIE | DMA_CFGR1_TEIE;
+  SPID2.txdmamode = DMA_CFGR1_TEIE;
+#endif
+
+#if CH32_SPI_USE_SPI3
+  spiObjectInit(&SPID3);
+  SPID3.spi       = SPI3;
+  SPID3.dmarx     = NULL;
+  SPID3.dmatx     = NULL;
+  SPID3.rxdmamode = DMA_CFGR1_TCIE | DMA_CFGR1_TEIE;
+  SPID3.txdmamode = DMA_CFGR1_TEIE;
+#endif
+
+#if CH32_SPI_USE_SPI4
+  spiObjectInit(&SPID4);
+  SPID4.spi       = SPI4;
+  SPID4.dmarx     = NULL;
+  SPID4.dmatx     = NULL;
+  SPID4.rxdmamode = DMA_CFGR1_TCIE | DMA_CFGR1_TEIE;
+  SPID4.txdmamode = DMA_CFGR1_TEIE;
 #endif
 }
 
@@ -79,25 +209,185 @@ void spi_lld_init(void) {
  */
 void spi_lld_start(SPIDriver *spip) {
 
+  /* If in stopped state then enables the SPI and DMA clocks.*/
   if (spip->state == SPI_STOP) {
-
-    /* Enables the peripheral.*/
-    if (false) {
-    }
-
-#if CH32_SPI_USE_SPI1 == TRUE
+#if CH32_SPI_USE_SPI1
     if (&SPID1 == spip) {
+      /* Allocating RX DMA channel.*/
+      spip->dmarx = dmaStreamAllocI(CH32_SPI_SPI1_RX_DMA_STREAM,
+                                    CH32_SPI_SPI1_IRQ_PRIORITY,
+                                    (ch32_dmaisr_t)spi_lld_serve_rx_interrupt,
+                                    (void *)spip);
+      osalDbgAssert(spip->dmarx != NULL, "unable to allocate stream");
 
+      /* Allocating TX DMA channel.*/
+      spip->dmatx = dmaStreamAllocI(CH32_SPI_SPI1_TX_DMA_STREAM,
+                                    CH32_SPI_SPI1_IRQ_PRIORITY,
+                                    (ch32_dmaisr_t)spi_lld_serve_tx_interrupt,
+                                    (void *)spip);
+      osalDbgAssert(spip->dmatx != NULL, "unable to allocate stream");
+
+      /* Enabling SPI clock.*/
+      resetHB2(RCC_SPI1RST);
+      enableHB2(RCC_SPI1EN);
+
+      /* Setting DMAMUX request source.*/
+      dmaSetRequestSource(spip->dmarx, DMA_MUX_SPI1_RX);
+      dmaSetRequestSource(spip->dmatx, DMA_MUX_SPI1_TX);
+    }
+#endif
+#if CH32_SPI_USE_SPI2
+    if (&SPID2 == spip) {
+      spip->dmarx = dmaStreamAllocI(CH32_SPI_SPI2_RX_DMA_STREAM,
+                                    CH32_SPI_SPI2_IRQ_PRIORITY,
+                                    (ch32_dmaisr_t)spi_lld_serve_rx_interrupt,
+                                    (void *)spip);
+      osalDbgAssert(spip->dmarx != NULL, "unable to allocate stream");
+
+      spip->dmatx = dmaStreamAllocI(CH32_SPI_SPI2_TX_DMA_STREAM,
+                                    CH32_SPI_SPI2_IRQ_PRIORITY,
+                                    (ch32_dmaisr_t)spi_lld_serve_tx_interrupt,
+                                    (void *)spip);
+      osalDbgAssert(spip->dmatx != NULL, "unable to allocate stream");
+
+      resetHB1(RCC_SPI2RST);
+      enableHB1(RCC_SPI2EN);
+
+      dmaSetRequestSource(spip->dmarx, DMA_MUX_SPI2_RX);
+      dmaSetRequestSource(spip->dmatx, DMA_MUX_SPI2_TX);
+    }
+#endif
+#if CH32_SPI_USE_SPI3
+    if (&SPID3 == spip) {
+      spip->dmarx = dmaStreamAllocI(CH32_SPI_SPI3_RX_DMA_STREAM,
+                                    CH32_SPI_SPI3_IRQ_PRIORITY,
+                                    (ch32_dmaisr_t)spi_lld_serve_rx_interrupt,
+                                    (void *)spip);
+      osalDbgAssert(spip->dmarx != NULL, "unable to allocate stream");
+
+      spip->dmatx = dmaStreamAllocI(CH32_SPI_SPI3_TX_DMA_STREAM,
+                                    CH32_SPI_SPI3_IRQ_PRIORITY,
+                                    (ch32_dmaisr_t)spi_lld_serve_tx_interrupt,
+                                    (void *)spip);
+      osalDbgAssert(spip->dmatx != NULL, "unable to allocate stream");
+
+      resetHB1(RCC_SPI3RST);
+      enableHB1(RCC_SPI3EN);
+
+      dmaSetRequestSource(spip->dmarx, DMA_MUX_SPI3_RX);
+      dmaSetRequestSource(spip->dmatx, DMA_MUX_SPI3_TX);
+    }
+#endif
+#if CH32_SPI_USE_SPI4
+    if (&SPID4 == spip) {
+      spip->dmarx = dmaStreamAllocI(CH32_SPI_SPI4_RX_DMA_STREAM,
+                                    CH32_SPI_SPI4_IRQ_PRIORITY,
+                                    (ch32_dmaisr_t)spi_lld_serve_rx_interrupt,
+                                    (void *)spip);
+      osalDbgAssert(spip->dmarx != NULL, "unable to allocate stream");
+
+      spip->dmatx = dmaStreamAllocI(CH32_SPI_SPI4_TX_DMA_STREAM,
+                                    CH32_SPI_SPI4_IRQ_PRIORITY,
+                                    (ch32_dmaisr_t)spi_lld_serve_tx_interrupt,
+                                    (void *)spip);
+      osalDbgAssert(spip->dmatx != NULL, "unable to allocate stream");
+
+      resetHB1(RCC_SPI4RST);
+      enableHB1(RCC_SPI4EN);
+
+      dmaSetRequestSource(spip->dmarx, DMA_MUX_SPI4_RX);
+      dmaSetRequestSource(spip->dmatx, DMA_MUX_SPI4_TX);
     }
 #endif
 
-    else {
+    /* DMA setup.*/
+    dmaStreamSetPeripheral(spip->dmarx, &spip->spi->DATAR);
+    dmaStreamSetPeripheral(spip->dmatx, &spip->spi->DATAR);
+  }
+
+  /* Configuration-specific DMA setup.*/
+  {
+    uint32_t dma_priority;
+
+#if CH32_SPI_USE_SPI1
+    if (&SPID1 == spip) {
+      dma_priority = CH32_SPI_SPI1_DMA_PRIORITY;
+    }
+    else
+#endif
+#if CH32_SPI_USE_SPI2
+    if (&SPID2 == spip) {
+      dma_priority = CH32_SPI_SPI2_DMA_PRIORITY;
+    }
+    else
+#endif
+#if CH32_SPI_USE_SPI3
+    if (&SPID3 == spip) {
+      dma_priority = CH32_SPI_SPI3_DMA_PRIORITY;
+    }
+    else
+#endif
+#if CH32_SPI_USE_SPI4
+    if (&SPID4 == spip) {
+      dma_priority = CH32_SPI_SPI4_DMA_PRIORITY;
+    }
+    else
+#endif
+    {
+      dma_priority = 0;
       osalDbgAssert(false, "invalid SPI instance");
+    }
+
+    if ((spip->config->cr1 & SPI_CTLR1_DFF) == 0) {
+      /* Frame width is 8 bits or smaller.*/
+      spip->rxdmamode = (spip->rxdmamode & ~CH32_SPI_DMA_SIZE_MASK) |
+                        DMA_PeripheralDataSize_Byte | DMA_MemoryDataSize_Byte;
+      spip->txdmamode = (spip->txdmamode & ~CH32_SPI_DMA_SIZE_MASK) |
+                        DMA_PeripheralDataSize_Byte | DMA_MemoryDataSize_Byte;
+    }
+    else {
+      /* Frame width is larger than 8 bits.*/
+      spip->rxdmamode = (spip->rxdmamode & ~CH32_SPI_DMA_SIZE_MASK) |
+                        DMA_PeripheralDataSize_HalfWord |
+                        DMA_MemoryDataSize_HalfWord;
+      spip->txdmamode = (spip->txdmamode & ~CH32_SPI_DMA_SIZE_MASK) |
+                        DMA_PeripheralDataSize_HalfWord |
+                        DMA_MemoryDataSize_HalfWord;
+    }
+
+    /* DMA priority setting.*/
+    {
+      static const uint32_t dma_priorities[4] = {
+        CH32_SPI_DMA_PRIORITY_0,
+        CH32_SPI_DMA_PRIORITY_1,
+        CH32_SPI_DMA_PRIORITY_2,
+        CH32_SPI_DMA_PRIORITY_3
+      };
+      dma_priority = dma_priorities[dma_priority & 3U];
+    }
+
+    spip->rxdmamode = (spip->rxdmamode & ~DMA_Priority_VeryHigh) |
+                      dma_priority;
+    spip->txdmamode = (spip->txdmamode & ~DMA_Priority_VeryHigh) |
+                      dma_priority;
+
+    if (spip->config->circular) {
+      spip->rxdmamode |= (DMA_Mode_Circular | DMA_CFGR1_HTIE);
+      spip->txdmamode |= (DMA_Mode_Circular | DMA_CFGR1_HTIE);
+    }
+    else {
+      spip->rxdmamode &= ~(DMA_Mode_Circular | DMA_CFGR1_HTIE);
+      spip->txdmamode &= ~(DMA_Mode_Circular | DMA_CFGR1_HTIE);
     }
   }
 
-  /* Configures the peripheral.*/
-
+  /* SPI setup and enable.*/
+  spip->spi->CTLR1 &= ~SPI_CTLR1_SPE;
+  spip->spi->CTLR1  = spip->config->cr1 | SPI_CTLR1_MSTR | SPI_CTLR1_SSM |
+                      SPI_CTLR1_SSI;
+  spip->spi->CTLR2  = spip->config->cr2 | SPI_CTLR2_SSOE |
+                      SPI_CTLR2_RXDMAEN | SPI_CTLR2_TXDMAEN;
+  spip->spi->CTLR1 |= SPI_CTLR1_SPE;
 }
 
 /**
@@ -109,21 +399,44 @@ void spi_lld_start(SPIDriver *spip) {
  */
 void spi_lld_stop(SPIDriver *spip) {
 
+  /* If in ready state then disables the SPI clock.*/
   if (spip->state == SPI_READY) {
 
-    /* Disables the peripheral.*/
-    if (false) {
-    }
+    /* SPI disable.*/
+    spip->spi->CTLR1 &= ~SPI_CTLR1_SPE;
+    spip->spi->CTLR1  = 0;
+    spip->spi->CTLR2  = 0;
 
-#if CH32_SPI_USE_SPI1 == TRUE
+    /* Freeing DMA streams.*/
+    dmaStreamFreeI(spip->dmarx);
+    dmaStreamFreeI(spip->dmatx);
+    spip->dmarx = NULL;
+    spip->dmatx = NULL;
+
+#if CH32_SPI_USE_SPI1
     if (&SPID1 == spip) {
-
+      resetHB2(RCC_SPI1RST);
+      disableHB2(RCC_SPI1EN);
     }
 #endif
-
-    else {
-      osalDbgAssert(false, "invalid SPI instance");
+#if CH32_SPI_USE_SPI2
+    if (&SPID2 == spip) {
+      resetHB1(RCC_SPI2RST);
+      disableHB1(RCC_SPI2EN);
     }
+#endif
+#if CH32_SPI_USE_SPI3
+    if (&SPID3 == spip) {
+      resetHB1(RCC_SPI3RST);
+      disableHB1(RCC_SPI3EN);
+    }
+#endif
+#if CH32_SPI_USE_SPI4
+    if (&SPID4 == spip) {
+      resetHB1(RCC_SPI4RST);
+      disableHB1(RCC_SPI4EN);
+    }
+#endif
   }
 }
 
@@ -137,8 +450,7 @@ void spi_lld_stop(SPIDriver *spip) {
  */
 void spi_lld_select(SPIDriver *spip) {
 
-  (void)spip;
-
+  /* No implementation on CH32.*/
 }
 
 /**
@@ -151,8 +463,7 @@ void spi_lld_select(SPIDriver *spip) {
  */
 void spi_lld_unselect(SPIDriver *spip) {
 
-  (void)spip;
-
+  /* No implementation on CH32.*/
 }
 #endif
 
@@ -169,9 +480,19 @@ void spi_lld_unselect(SPIDriver *spip) {
  */
 void spi_lld_ignore(SPIDriver *spip, size_t n) {
 
-  (void)spip;
-  (void)n;
+  osalDbgAssert(n <= CH32_DMA_MAX_TRANSFER,
+                "unsupported DMA transfer size");
 
+  dmaStreamSetMemory0(spip->dmarx, &dummyrx);
+  dmaStreamSetTransactionSize(spip->dmarx, n);
+  dmaStreamSetMode(spip->dmarx, spip->rxdmamode | DMA_DIR_PeripheralSRC);
+
+  dmaStreamSetMemory0(spip->dmatx, &dummytx);
+  dmaStreamSetTransactionSize(spip->dmatx, n);
+  dmaStreamSetMode(spip->dmatx, spip->txdmamode | DMA_DIR_PeripheralDST);
+
+  dmaStreamEnable(spip->dmarx);
+  dmaStreamEnable(spip->dmatx);
 }
 
 /**
@@ -192,11 +513,23 @@ void spi_lld_ignore(SPIDriver *spip, size_t n) {
 void spi_lld_exchange(SPIDriver *spip, size_t n,
                       const void *txbuf, void *rxbuf) {
 
-  (void)spip;
-  (void)n;
-  (void)txbuf;
-  (void)rxbuf;
+  osalDbgAssert(n <= CH32_DMA_MAX_TRANSFER,
+                "unsupported DMA transfer size");
 
+  dmaStreamSetMemory0(spip->dmarx, rxbuf);
+  dmaStreamSetTransactionSize(spip->dmarx, n);
+  dmaStreamSetMode(spip->dmarx,
+                   spip->rxdmamode | DMA_DIR_PeripheralSRC |
+                   DMA_MemoryInc_Enable);
+
+  dmaStreamSetMemory0(spip->dmatx, txbuf);
+  dmaStreamSetTransactionSize(spip->dmatx, n);
+  dmaStreamSetMode(spip->dmatx,
+                   spip->txdmamode | DMA_DIR_PeripheralDST |
+                   DMA_MemoryInc_Enable);
+
+  dmaStreamEnable(spip->dmarx);
+  dmaStreamEnable(spip->dmatx);
 }
 
 /**
@@ -214,10 +547,21 @@ void spi_lld_exchange(SPIDriver *spip, size_t n,
  */
 void spi_lld_send(SPIDriver *spip, size_t n, const void *txbuf) {
 
-  (void)spip;
-  (void)n;
-  (void)txbuf;
+  osalDbgAssert(n <= CH32_DMA_MAX_TRANSFER,
+                "unsupported DMA transfer size");
 
+  dmaStreamSetMemory0(spip->dmarx, &dummyrx);
+  dmaStreamSetTransactionSize(spip->dmarx, n);
+  dmaStreamSetMode(spip->dmarx, spip->rxdmamode | DMA_DIR_PeripheralSRC);
+
+  dmaStreamSetMemory0(spip->dmatx, txbuf);
+  dmaStreamSetTransactionSize(spip->dmatx, n);
+  dmaStreamSetMode(spip->dmatx,
+                   spip->txdmamode | DMA_DIR_PeripheralDST |
+                   DMA_MemoryInc_Enable);
+
+  dmaStreamEnable(spip->dmarx);
+  dmaStreamEnable(spip->dmatx);
 }
 
 /**
@@ -235,10 +579,21 @@ void spi_lld_send(SPIDriver *spip, size_t n, const void *txbuf) {
  */
 void spi_lld_receive(SPIDriver *spip, size_t n, void *rxbuf) {
 
-  (void)spip;
-  (void)n;
-  (void)rxbuf;
+  osalDbgAssert(n <= CH32_DMA_MAX_TRANSFER,
+                "unsupported DMA transfer size");
 
+  dmaStreamSetMemory0(spip->dmarx, rxbuf);
+  dmaStreamSetTransactionSize(spip->dmarx, n);
+  dmaStreamSetMode(spip->dmarx,
+                   spip->rxdmamode | DMA_DIR_PeripheralSRC |
+                   DMA_MemoryInc_Enable);
+
+  dmaStreamSetMemory0(spip->dmatx, &dummytx);
+  dmaStreamSetTransactionSize(spip->dmatx, n);
+  dmaStreamSetMode(spip->dmatx, spip->txdmamode | DMA_DIR_PeripheralDST);
+
+  dmaStreamEnable(spip->dmarx);
+  dmaStreamEnable(spip->dmatx);
 }
 
 #if (SPI_SUPPORTS_CIRCULAR == TRUE) || defined(__DOXYGEN__)
@@ -251,7 +606,9 @@ void spi_lld_receive(SPIDriver *spip, size_t n, void *rxbuf) {
  */
 void spi_lld_abort(SPIDriver *spip) {
 
-  (void)spip;
+  /* Stopping DMAs.*/
+  dmaStreamDisable(spip->dmatx);
+  dmaStreamDisable(spip->dmarx);
 }
 #endif /* SPI_SUPPORTS_CIRCULAR == TRUE */
 
@@ -271,10 +628,10 @@ void spi_lld_abort(SPIDriver *spip) {
  */
 uint16_t spi_lld_polled_exchange(SPIDriver *spip, uint16_t frame) {
 
-  (void)spip;
-  (void)frame;
-
-  return 0;
+  spip->spi->DATAR = frame;
+  while ((spip->spi->STATR & SPI_STATR_RXNE) == 0)
+    ;
+  return spip->spi->DATAR;
 }
 
 #endif /* HAL_USE_SPI == TRUE */

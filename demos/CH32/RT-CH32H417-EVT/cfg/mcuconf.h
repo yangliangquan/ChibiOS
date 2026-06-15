@@ -130,19 +130,107 @@
 /*
  * I2C driver system settings.
  */
-#define CH32_I2C_USE_I2C1                  FALSE
+#define CH32_I2C_USE_I2C1                  TRUE
 #define CH32_I2C_USE_I2C2                  FALSE
 #define CH32_I2C_USE_I2C3                  FALSE
 #define CH32_I2C_USE_I2C4                  FALSE
 
 /*
+ * I2C clock frequency (Hz). Must match the HB1 bus clock frequency
+ * driving the I2C peripheral. The FREQ field in CTLR2 is limited to
+ * 6 bits (max 63), so this value must be <= 63000000 for correct
+ * I2C operation.
+ */
+#define CH32_I2C_CLK_FREQ                 96000000
+
+/*
+ * I2C DMA stream settings.
+ */
+#define CH32_I2C_I2C1_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2C_I2C1_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2C_I2C2_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2C_I2C2_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2C_I2C3_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2C_I2C3_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2C_I2C4_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2C_I2C4_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+
+/*
+ * I2C DMA priority settings.
+ */
+#define CH32_I2C_I2C1_DMA_PRIORITY         1
+#define CH32_I2C_I2C2_DMA_PRIORITY         1
+#define CH32_I2C_I2C3_DMA_PRIORITY         1
+#define CH32_I2C_I2C4_DMA_PRIORITY         1
+
+/*
+ * I2C IRQ priority settings.
+ */
+#define CH32_I2C_I2C1_IRQ_PRIORITY         10
+#define CH32_I2C_I2C2_IRQ_PRIORITY         10
+#define CH32_I2C_I2C3_IRQ_PRIORITY         10
+#define CH32_I2C_I2C4_IRQ_PRIORITY         10
+
+/*
+ * I2C DMA error hook.
+ */
+#define CH32_I2C_DMA_ERROR_HOOK(i2cp)      osalSysHalt("DMA failure")
+
+/*
  * SPI driver system settings.
  */
-#define STM32_SPI_USE_SPI1                  FALSE
-#define STM32_SPI_USE_SPI2                  FALSE
-#define STM32_SPI_USE_SPI3                  FALSE
-#define STM32_SPI_USE_SPI4                  FALSE
+#define CH32_SPI_USE_SPI1                  TRUE
+#define CH32_SPI_USE_SPI2                  FALSE
+#define CH32_SPI_USE_SPI3                  FALSE
+#define CH32_SPI_USE_SPI4                  FALSE
 
+/*
+ * SPI DMA stream settings.
+ */
+#define CH32_SPI_SPI1_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_SPI_SPI1_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_SPI_SPI2_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_SPI_SPI2_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_SPI_SPI3_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_SPI_SPI3_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_SPI_SPI4_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_SPI_SPI4_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+
+/*
+ * SPI DMA priority settings.
+ */
+#define CH32_SPI_SPI1_DMA_PRIORITY         3
+#define CH32_SPI_SPI2_DMA_PRIORITY         3
+#define CH32_SPI_SPI3_DMA_PRIORITY         3
+#define CH32_SPI_SPI4_DMA_PRIORITY         3
+
+/*
+ * SPI IRQ priority settings.
+ */
+#define CH32_SPI_SPI1_IRQ_PRIORITY         10
+#define CH32_SPI_SPI2_IRQ_PRIORITY         10
+#define CH32_SPI_SPI3_IRQ_PRIORITY         10
+#define CH32_SPI_SPI4_IRQ_PRIORITY         10
+
+
+/*
+ * I2S driver system settings.
+ */
+#define CH32_I2S_USE_I2S1                  FALSE
+#define CH32_I2S_USE_I2S2                  TRUE
+#define CH32_I2S_SPI1_MODE                 (CH32_I2S_MODE_MASTER |          \
+                                            CH32_I2S_MODE_TX)
+#define CH32_I2S_SPI2_MODE                 (CH32_I2S_MODE_MASTER |          \
+                                            CH32_I2S_MODE_TX)
+#define CH32_I2S_SPI1_IRQ_PRIORITY         1
+#define CH32_I2S_SPI2_IRQ_PRIORITY         1
+#define CH32_I2S_SPI1_DMA_PRIORITY         1
+#define CH32_I2S_SPI2_DMA_PRIORITY         1
+#define CH32_I2S_SPI1_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2S_SPI1_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2S_SPI2_RX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2S_SPI2_TX_DMA_STREAM        CH32_DMA_STREAM_ID_ANY
+#define CH32_I2S_DMA_ERROR_HOOK(i2sp)      osalSysHalt("DMA failure")
 
 /*
  * RTC driver system settings.
