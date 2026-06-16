@@ -70,7 +70,7 @@
 /*
  * DAC driver system settings.
  */
-#define CH32_DAC_USE_DAC1_CH1              FALSE
+#define CH32_DAC_USE_DAC1_CH1              TRUE
 #define CH32_DAC_USE_DAC1_CH2              FALSE
 
 /*
@@ -277,5 +277,10 @@
 #define CH32_UART_USE_USART6             FALSE
 #define CH32_UART_USE_USART7             FALSE
 #define CH32_UART_USE_USART8             FALSE
+
+/*
+ * CRY (crypto) driver system settings.
+ */
+#define CH32_CRY_USE_CRY1                  TRUE
 
 #endif /* MCUCONF_H */

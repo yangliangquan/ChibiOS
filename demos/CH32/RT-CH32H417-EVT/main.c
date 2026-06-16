@@ -536,6 +536,73 @@ static THD_FUNCTION(I2SThread, arg) {
   }
 }
 
+/*===========================================================================*/
+/* DAC driver related.                                                       */
+/*===========================================================================*/
+
+/*
+ * DAC configuration.
+ * 12-bit right-aligned, software trigger, output buffer enabled.
+ *
+ * cr = 0 means:
+ * - BOFF=0   -> output buffer enabled
+ * - TEN=0    -> software trigger (no external trigger)
+ * - TSEL=0   -> trigger selection (don't care since TEN=0)
+ * - WAVE=0   -> no noise/triangle wave generation
+ * - MAMP=0   -> mask/amplitude (don't care since WAVE=0)
+ */
+static const DACConfig dac1_cfg = {
+  .init      = 0U,
+  .datamode  = DAC_DHRM_12BIT_RIGHT,
+  .cr        = 0b011U<<3
+};
+
+static const DACConversionGroup dac1_grpcfg = {
+  .num_channels = 1,
+  .end_cb = NULL,
+  .error_cb = NULL,
+  .dummy = 0
+};
+
+const GPTConfig dac_gpt_cfg = {
+  .frequency = 10000,
+  .callback = NULL,
+  .dier = TIM_UIE,
+  .cr2 = 0b010<<4
+};
+
+static THD_WORKING_AREA(waDACThread, 2048);
+static THD_FUNCTION(DACThread, arg) {
+  (void)arg;
+  chRegSetThreadName("DACThread");
+
+  /* Configure DAC1_OUT1 pin (PA4) as analog input (floating). */
+  palSetPadMode(GPIOA, GPIO_PIN4, PAL_MODE_INPUT_ANALOG);
+
+  /* Start DAC1 CH1. */
+  uint16_t dac_samples[1024];
+
+  for(uint32_t i = 0; i < 1024; i++) {
+    dac_samples[i] = (i * 4095) / 1023; /* Ramp from 0 to 4095 */
+  }
+
+  gptStart(&GPTD5, &dac_gpt_cfg);
+  gptStartContinuous(&GPTD5, 100);
+
+  dacStart(&DACD1, &dac1_cfg);
+  dacStartConversion(&DACD1,&dac1_grpcfg, dac_samples, sizeof(dac_samples)/sizeof(*dac_samples));
+  /* Generate a sawtooth wave on DAC1 CH1. */
+  uint32_t val = 0;
+  while (true) {
+    /* Output 12-bit right-aligned sample. */
+
+    /* Increment and wrap at 12-bit max value. */
+    val = (val + 16) & 0xFFF;
+
+    chThdSleepMilliseconds(2000);
+  }
+}
+
 static void cmd_hello(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void)argc;
   (void)argv;
