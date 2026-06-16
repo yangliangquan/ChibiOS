@@ -31,31 +31,106 @@
 /* Driver constants.                                                         */
 /*===========================================================================*/
 
-/**
- * @brief   Number of transmit mailboxes.
+/*
+ * The following macros from the ST header file are replaced with better
+ * equivalents.
  */
-#define CAN_TX_MAILBOXES            1
+#undef CAN_BTIMR_BRP
+#undef CAN_BTIMR_TS1
+#undef CAN_BTIMR_TS2
+#undef CAN_BTIMR_SJW
 
 /**
- * @brief   Number of receive mailboxes.
+ * @brief   This switch defines whether the driver implementation supports
+ *          a low power switch mode with automatic an wakeup feature.
  */
-#define CAN_RX_MAILBOXES            1
+#define CAN_SUPPORTS_SLEEP          TRUE
+
+/**
+ * @brief   This implementation supports three transmit mailboxes.
+ */
+#define CAN_TX_MAILBOXES            3
+
+/**
+ * @brief   This implementation supports two receive mailboxes.
+ */
+#define CAN_RX_MAILBOXES            2
+
+/**
+ * @name    CAN registers helper macros
+ * @{
+ */
+#define CAN_BTIMR_BRP(n)            (n)         /**< @brief BRP field macro.*/
+#define CAN_BTIMR_TS1(n)            ((n) << 16) /**< @brief TS1 field macro.*/
+#define CAN_BTIMR_TS2(n)            ((n) << 20) /**< @brief TS2 field macro.*/
+#define CAN_BTIMR_SJW(n)            ((n) << 24) /**< @brief SJW field macro.*/
+
+#define CAN_IDE_STD                 0           /**< @brief Standard id.    */
+#define CAN_IDE_EXT                 1           /**< @brief Extended id.    */
+
+#define CAN_RTR_DATA                0           /**< @brief Data frame.     */
+#define CAN_RTR_REMOTE              1           /**< @brief Remote frame.   */
+/** @} */
 
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
 /*===========================================================================*/
 
 /**
- * @name    CH32 configuration options
+ * @name    Configuration options
  * @{
  */
 /**
+ * @brief   CAN pedantic errors report.
+ * @details Use of this option is IRQ-intensive.
+ */
+#if !defined(CH32_CAN_REPORT_ALL_ERRORS) || defined(__DOXYGEN__)
+#define CH32_CAN_REPORT_ALL_ERRORS         FALSE
+#endif
+
+/**
  * @brief   CAN1 driver enable switch.
  * @details If set to @p TRUE the support for CAN1 is included.
- * @note    The default is @p FALSE.
  */
 #if !defined(CH32_CAN_USE_CAN1) || defined(__DOXYGEN__)
 #define CH32_CAN_USE_CAN1                  FALSE
+#endif
+
+/**
+ * @brief   CAN2 driver enable switch.
+ * @details If set to @p TRUE the support for CAN2 is included.
+ */
+#if !defined(CH32_CAN_USE_CAN2) || defined(__DOXYGEN__)
+#define CH32_CAN_USE_CAN2                  FALSE
+#endif
+
+/**
+ * @brief   CAN3 driver enable switch.
+ * @details If set to @p TRUE the support for CAN3 is included.
+ */
+#if !defined(CH32_CAN_USE_CAN3) || defined(__DOXYGEN__)
+#define CH32_CAN_USE_CAN3                  FALSE
+#endif
+
+/**
+ * @brief   CAN1 interrupt priority level setting.
+ */
+#if !defined(CH32_CAN_CAN1_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_CAN_CAN1_IRQ_PRIORITY         11
+#endif
+
+/**
+ * @brief   CAN2 interrupt priority level setting.
+ */
+#if !defined(CH32_CAN_CAN2_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_CAN_CAN2_IRQ_PRIORITY         11
+#endif
+
+/**
+ * @brief   CAN3 interrupt priority level setting.
+ */
+#if !defined(CH32_CAN_CAN3_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_CAN_CAN3_IRQ_PRIORITY         11
 #endif
 /** @} */
 
@@ -63,12 +138,44 @@
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
 
+#if !defined(CH32_HAS_CAN1)
+#error "CH32_HAS_CAN1 not defined in registry"
+#endif
+
+#if !defined(CH32_HAS_CAN2)
+#error "CH32_HAS_CAN2 not defined in registry"
+#endif
+
+#if !defined(CH32_HAS_CAN3)
+#error "CH32_HAS_CAN3 not defined in registry"
+#endif
+
+#if CH32_CAN_USE_CAN1 && !CH32_HAS_CAN1
+#error "CAN1 not present in the selected device"
+#endif
+
+#if CH32_CAN_USE_CAN2 && !CH32_HAS_CAN2
+#error "CAN2 not present in the selected device"
+#endif
+
+#if CH32_CAN_USE_CAN3 && !CH32_HAS_CAN3
+#error "CAN3 not present in the selected device"
+#endif
+
+#if !CH32_CAN_USE_CAN1 && !CH32_CAN_USE_CAN2 && !CH32_CAN_USE_CAN3
+#error "CAN driver activated but no CAN peripheral assigned"
+#endif
+
+#if CAN_USE_SLEEP_MODE && !CAN_SUPPORTS_SLEEP
+#error "CAN sleep mode not supported in this architecture"
+#endif
+
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
 /*===========================================================================*/
 
 /**
- * @brief   Type of a structure representing an CAN driver.
+ * @brief   Type of a CAN driver.
  */
 typedef struct hal_can_driver CANDriver;
 
@@ -77,7 +184,7 @@ typedef struct hal_can_driver CANDriver;
  */
 typedef uint32_t canmbx_t;
 
-#if defined(CAN_ENFORCE_USE_CALLBACKS) || defined(__DOXYGEN__)
+#if (CAN_ENFORCE_USE_CALLBACKS == TRUE) || defined(__DOXYGEN__)
 /**
  * @brief   Type of a CAN notification callback.
  *
@@ -94,20 +201,24 @@ typedef void (*can_callback_t)(CANDriver *canp, uint32_t flags);
  *          machine data endianness, it can be still useful for a quick filling.
  */
 typedef struct {
-  /*lint -save -e46 [6.1] Standard types are fine too.*/
-  uint8_t                   DLC:4;          /**< @brief Data length.        */
-  uint8_t                   RTR:1;          /**< @brief Frame type.         */
-  uint8_t                   IDE:1;          /**< @brief Identifier type.    */
-  union {
-    uint32_t                SID:11;         /**< @brief Standard identifier.*/
-    uint32_t                EID:29;         /**< @brief Extended identifier.*/
-    uint32_t                _align1;
+  struct {
+    uint8_t                 DLC:4;          /**< @brief Data length.        */
+    uint8_t                 RTR:1;          /**< @brief Frame type.         */
+    uint8_t                 IDE:1;          /**< @brief Identifier type.    */
   };
-  /*lint -restore*/
+  union {
+    struct {
+      uint32_t              SID:11;         /**< @brief Standard identifier.*/
+    };
+    struct {
+      uint32_t              EID:29;         /**< @brief Extended identifier.*/
+    };
+  };
   union {
     uint8_t                 data8[8];       /**< @brief Frame data.         */
     uint16_t                data16[4];      /**< @brief Frame data.         */
     uint32_t                data32[2];      /**< @brief Frame data.         */
+    uint64_t                data64[1];      /**< @brief Frame data.         */
   };
 } CANTxFrame;
 
@@ -117,31 +228,84 @@ typedef struct {
  *          machine data endianness, it can be still useful for a quick filling.
  */
 typedef struct {
-  /*lint -save -e46 [6.1] Standard types are fine too.*/
-  uint8_t                   FMI;            /**< @brief Filter id.          */
-  uint16_t                  TIME;           /**< @brief Time stamp.         */
-  uint8_t                   DLC:4;          /**< @brief Data length.        */
-  uint8_t                   RTR:1;          /**< @brief Frame type.         */
-  uint8_t                   IDE:1;          /**< @brief Identifier type.    */
-  union {
-    uint32_t                SID:11;         /**< @brief Standard identifier.*/
-    uint32_t                EID:29;         /**< @brief Extended identifier.*/
-    uint32_t                _align1;
+  struct {
+    uint8_t                 FMI;            /**< @brief Filter id.          */
+    uint16_t                TIME;           /**< @brief Time stamp.         */
   };
-  /*lint -restore*/
+  struct {
+    uint8_t                 DLC:4;          /**< @brief Data length.        */
+    uint8_t                 RTR:1;          /**< @brief Frame type.         */
+    uint8_t                 IDE:1;          /**< @brief Identifier type.    */
+  };
+  union {
+    struct {
+      uint32_t              SID:11;         /**< @brief Standard identifier.*/
+    };
+    struct {
+      uint32_t              EID:29;         /**< @brief Extended identifier.*/
+    };
+  };
   union {
     uint8_t                 data8[8];       /**< @brief Frame data.         */
     uint16_t                data16[4];      /**< @brief Frame data.         */
     uint32_t                data32[2];      /**< @brief Frame data.         */
+    uint64_t                data64[1];      /**< @brief Frame data.         */
   };
 } CANRxFrame;
+
+/**
+ * @brief   CAN filter.
+ * @note    Refer to the STM32 reference manual for info about filters.
+ */
+typedef struct {
+  /**
+   * @brief   Number of the filter bank to be programmed.
+   */
+  uint32_t                  filter;
+  /**
+   * @brief   Filter mode.
+   * @note    This bit represent the CAN_FMCFGR register bit associated to this
+   *          filter (0=mask mode, 1=list mode).
+   */
+  uint32_t                  mode;
+  /**
+   * @brief   Filter scale.
+   * @note    This bit represent the CAN_FSCFGR register bit associated to this
+   *          filter (0=16 bits mode, 1=32 bits mode).
+   */
+  uint32_t                  scale;
+  /**
+   * @brief   Filter assignment.
+   * @note    This bit represent the CAN_FAFIFOR register bit associated to
+   *          this filter (0=FIFO0, 1=FIFO1).
+   */
+  uint32_t                  assignment;
+  /**
+   * @brief   Filter register 1 (identifier).
+   */
+  uint32_t                  register1;
+  /**
+   * @brief   Filter register 2 (mask/identifier depending on mode=0/1).
+   */
+  uint32_t                  register2;
+} CANFilter;
 
 /**
  * @brief   Type of a CAN configuration structure.
  */
 typedef struct hal_can_config {
-  /* End of the mandatory fields.*/
-  uint32_t                  dummy;
+  /**
+   * @brief   CAN CTLR register initialization data.
+   * @note    Some bits in this register are enforced by the driver regardless
+   *          their status in this field.
+   */
+  uint32_t                  mcr;
+  /**
+   * @brief   CAN BTIMR register initialization data.
+   * @note    Some bits in this register are enforced by the driver regardless
+   *          their status in this field.
+   */
+  uint32_t                  btr;
 } CANConfig;
 
 /**
@@ -171,7 +335,7 @@ struct hal_can_driver {
    *          until the received frames queue has been completely emptied. It
    *          is <b>not</b> broadcasted for each received frame. It is
    *          responsibility of the application to empty the queue by
-   *          repeatedly invoking @p chReceive() when listening to this event.
+   *          repeatedly invoking @p canReceive() when listening to this event.
    *          This behavior minimizes the interrupt served by the system
    *          because CAN traffic.
    * @note    The flags associated to the listeners will indicate which
@@ -182,15 +346,19 @@ struct hal_can_driver {
    * @brief   One or more transmission mailbox become available.
    * @note    The flags associated to the listeners will indicate which
    *          transmit mailboxes become empty.
+   * @note    The upper 16 bits are transmission error flags associated
+   *          to the transmit mailboxes.
    */
   event_source_t            txempty_event;
   /**
    * @brief   A CAN bus error happened.
-   * @note    The flags associated to the listeners will indicate the
-   *          error(s) that have occurred.
+   * @note    The flags associated to the listeners will indicate that
+   *          receive error(s) have occurred.
+   * @note    In this implementation the upper 16 bits are filled with the
+   *          unprocessed content of the ERRSR register.
    */
   event_source_t            error_event;
-#if (CAN_USE_SLEEP_MODE == TRUE) || defined (__DOXYGEN__)
+#if CAN_USE_SLEEP_MODE || defined (__DOXYGEN__)
   /**
    * @brief   Entering sleep state event.
    */
@@ -199,7 +367,7 @@ struct hal_can_driver {
    * @brief   Exiting sleep state event.
    */
   event_source_t            wakeup_event;
-#endif
+#endif /* CAN_USE_SLEEP_MODE */
 #else /* CAN_ENFORCE_USE_CALLBACKS == TRUE */
   /**
    * @brief   One or more frames become available.
@@ -230,6 +398,10 @@ struct hal_can_driver {
 #endif
 #endif
   /* End of the mandatory fields.*/
+  /**
+   * @brief   Pointer to the CAN peripheral registers block.
+   */
+  CAN_TypeDef               *can;
 };
 
 /*===========================================================================*/
@@ -242,6 +414,14 @@ struct hal_can_driver {
 
 #if (CH32_CAN_USE_CAN1 == TRUE) && !defined(__DOXYGEN__)
 extern CANDriver CAND1;
+#endif
+
+#if (CH32_CAN_USE_CAN2 == TRUE) && !defined(__DOXYGEN__)
+extern CANDriver CAND2;
+#endif
+
+#if (CH32_CAN_USE_CAN3 == TRUE) && !defined(__DOXYGEN__)
+extern CANDriver CAND3;
 #endif
 
 #ifdef __cplusplus
@@ -264,6 +444,8 @@ extern "C" {
   void can_lld_sleep(CANDriver *canp);
   void can_lld_wakeup(CANDriver *canp);
 #endif
+  void canSTM32SetFilters(CANDriver *canp, uint32_t can2sb,
+                          uint32_t num, const CANFilter *cfp);
 #ifdef __cplusplus
 }
 #endif

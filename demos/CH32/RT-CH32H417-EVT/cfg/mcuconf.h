@@ -64,8 +64,12 @@
 /*
  * CAN driver system settings.
  */
-#define CH32_CAN_USE_CAN1                  FALSE
+#define CH32_CAN_USE_CAN1                  TRUE
 #define CH32_CAN_USE_CAN2                  FALSE
+#define CH32_CAN_USE_CAN3                  FALSE
+#define CH32_CAN_CAN1_IRQ_PRIORITY         11
+#define CH32_CAN_CAN2_IRQ_PRIORITY         11
+#define CH32_CAN_CAN3_IRQ_PRIORITY         11
 
 /*
  * DAC driver system settings.

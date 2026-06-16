@@ -603,6 +603,113 @@ static THD_FUNCTION(DACThread, arg) {
   }
 }
 
+/*===========================================================================*/
+/* CAN driver related.                                                       */
+/*===========================================================================*/
+
+/*
+ * CAN1 configuration.
+ * Bit timing for 125kbps @ 48MHz CAN clock (APB1 = HCLK/HPRE).
+ * With HPRE_DIV1: HCLK = 96MHz, but CAN clock is from HB1 (APB1-like).
+ * CAN clock = PCLK1 = HCLK / HPRE.
+ * With HPRE_DIV4: HCLK = 96MHz, PCLK1 = 96MHz.
+ * For standard bxCAN: CAN clock = PCLK1 (max 48MHz on typical STM32).
+ * CH32H417 may support higher. Using PCLK1 = 96MHz.
+ *
+ * Bit timing for 125kbps with 96MHz CAN clock:
+ * tq = (BRP + 1) / CAN_clock
+ * Nominal bit time = (tq * (TS1 + TS2 + 3))  (SJW + TS1 + TS2 + 1)
+ * Let BRP = 23 (24 tq prescaler), CAN_CLK = 96MHz / 24 = 4MHz -> tq = 250ns
+ * Target 125kbps -> bit time = 8us = 32 tq
+ * Sync = 1 tq, TS1 = 22 tq, TS2 = 9 tq -> total 32 tq
+ * SJW = 4 tq
+ */
+#define CAN_TEST_BAUD_RATE           125000
+#define CAN_TEST_TX_ID               0x42A
+
+static const CANConfig can1_cfg = {
+  .mcr = CAN_CTLR_ABOM | CAN_CTLR_TXFP,
+  .btr = CAN_BTIMR_BRP(23)   |         /* BRP = 23 -> prescaler 24 */
+         CAN_BTIMR_TS1(22)   |         /* TS1 = 22 tq */
+         CAN_BTIMR_TS2(9)    |         /* TS2 = 9 tq */
+         CAN_BTIMR_SJW(4)              /* SJW = 4 tq */|CAN_BTIMR_LBKM
+};
+
+static THD_WORKING_AREA(waCANThread, 1024);
+static THD_FUNCTION(CANThread, arg) {
+  (void)arg;
+  uint32_t tx_count = 0;
+  uint32_t rx_count = 0;
+  uint32_t err_count = 0;
+
+  chRegSetThreadName("CANThread");
+
+  /* Configure CAN1 pins: PD0(RX), PD1(TX), AF9 for CAN1 on CH32H417. */
+  palSetPadMode(GPIOD, GPIO_PIN0, PAL_CH32_ALTERNATE_INPUT(9));
+  palSetPadMode(GPIOD, GPIO_PIN1, PAL_CH32_ALTERNATE_PUSHPULL(9));
+
+  /* Start CAN1. */
+  canStart(&CAND1, &can1_cfg);
+
+  /* Initialize a CAN Tx frame. Standard ID 0x42A, 8 data bytes. */
+  CANTxFrame tx_frame;
+  tx_frame.IDE = CAN_IDE_STD;
+  tx_frame.RTR = CAN_RTR_DATA;
+  tx_frame.SID = CAN_TEST_TX_ID;
+  tx_frame.DLC = 8;
+
+  /* Set initial data. */
+  tx_frame.data32[0] = 0;
+  tx_frame.data32[1] = 0;
+
+  /* Set up Rx frame buffer. */
+  CANRxFrame rx_frame;
+  msg_t status;
+  systime_t time;
+
+  while (true) {
+    /* Update data bytes with a counter. */
+    tx_frame.data8[0] = (uint8_t)(tx_count >> 0);
+    tx_frame.data8[1] = (uint8_t)(tx_count >> 8);
+    tx_frame.data8[2] = (uint8_t)(tx_count >> 16);
+    tx_frame.data8[3] = (uint8_t)(tx_count >> 24);
+    tx_frame.data8[4] = 0xAA;
+    tx_frame.data8[5] = 0xBB;
+    tx_frame.data8[6] = 0xCC;
+    tx_frame.data8[7] = 0xDD;
+
+    /* Transmit a CAN frame with 100ms timeout. */
+    status = canTransmitTimeout(&CAND1, CAN_ANY_MAILBOX, &tx_frame,
+                                TIME_MS2I(100));
+
+    if (status == MSG_OK) {
+      tx_count++;
+      /* Toggle PD4 (orange LED) on successful transmit. */
+      palTogglePad(GPIOD, GPIO_PIN4);
+    }
+    else {
+      err_count++;
+      /* Set PD4 steady on error. */
+      palSetPad(GPIOD, GPIO_PIN4);
+    }
+
+    /* Try to receive any pending frames (loopback or from other node). */
+    time = TIME_MS2I(10);
+    status = canReceiveTimeout(&CAND1, CAN_ANY_MAILBOX, &rx_frame, time);
+
+    if (status == MSG_OK) {
+      rx_count++;
+    }
+
+    /* Every ~50 transmissions, toggle PD5 (green LED). */
+    if ((tx_count % 50) == 0) {
+      palTogglePad(GPIOD, GPIO_PIN5);
+    }
+
+    chThdSleepMilliseconds(500);
+  }
+}
+
 static void cmd_hello(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void)argc;
   (void)argv;
@@ -668,6 +775,7 @@ int main(void)
     // chThdCreateStatic(waI2CThread, sizeof(waI2CThread), NORMALPRIO, I2CThread, NULL);
     chThdCreateStatic(waI2SThread, sizeof(waI2SThread), NORMALPRIO, I2SThread, NULL);
     chThdCreateStatic(waDACThread, sizeof(waDACThread), NORMALPRIO, DACThread, NULL);
+    chThdCreateStatic(waCANThread, sizeof(waCANThread), NORMALPRIO, CANThread, NULL);
 
     /*
      * Normal main() thread activity, in this demo it does nothing except

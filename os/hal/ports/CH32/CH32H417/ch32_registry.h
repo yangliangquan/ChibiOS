@@ -80,8 +80,9 @@
 #define CH32_ADC_SUPPORTS_PRESCALER        TRUE
 
 /* CAN attributes.*/
-#define CH32_HAS_CAN1 FALSE
+#define CH32_HAS_CAN1 TRUE
 #define CH32_HAS_CAN2 FALSE
+#define CH32_HAS_CAN3 TRUE
 
 /* DAC attributes.*/
 #define CH32_HAS_DAC1_CH1 TRUE
