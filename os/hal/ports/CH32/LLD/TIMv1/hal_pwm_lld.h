@@ -344,7 +344,9 @@ typedef struct {
   PWMChannelConfig          channels[PWM_CHANNELS];
   /* End of the mandatory fields.*/
   /* DMA settings: bit 0: update, bit 1: capture 0, bit 2: capture 1, bit 3: capture 2, bit 4: capture 3, bit 5: trigger*/
-  uint16_t                  dma_settings; 
+  uint32_t                  cr2;       /**< TIMx_CR2 register initialization data.     */
+  uint32_t                  dier;      /**< TIMx_DIER register initialization data.    */
+  uint32_t                  bdtr;      /**< TIMx_BDTR register initialization data, only used if the timer has a BDTR register.    */
 } PWMConfig;
 
 /**

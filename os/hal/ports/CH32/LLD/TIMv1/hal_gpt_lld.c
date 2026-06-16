@@ -502,11 +502,11 @@ void gpt_lld_start(GPTDriver *gptp) {
   uint32_t psc = (clock / gptp->config->frequency) - 1;
   if(psc > 0xffff)
     osalSysHalt("Cannot configure GPT: psc too large");
-  gptp->tim->CTLR2 = 0;
+  gptp->tim->CTLR2 = gptp->config->cr2;
   gptp->tim->CTLR1 = 0;
   gptp->tim->PSC = psc;
   gptp->tim->INTFR = 0;
-  gptp->tim->DMAINTENR &= ~(TIM_UIE | TIM_CC1IE | TIM_CC2IE | TIM_CC3IE | TIM_CC4IE | TIM_COMIE | TIM_TIE | TIM_BIE);
+  gptp->tim->DMAINTENR &= gptp->config->dier;
 }
 
 /**

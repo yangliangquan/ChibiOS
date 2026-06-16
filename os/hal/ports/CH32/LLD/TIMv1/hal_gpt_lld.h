@@ -363,6 +363,8 @@ typedef struct {
    */
   gptcallback_t             callback;
   /* End of the mandatory fields.*/
+  uint32_t                  cr2;       /**< TIMx_CR2 register initialization data.     */
+  uint32_t                  dier;      /**< TIMx_DIER register initialization data.    */
 } GPTConfig;
 
 /**

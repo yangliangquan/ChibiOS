@@ -80,7 +80,7 @@
 #define CH32_GPT_USE_TIM2                  TRUE
 #define CH32_GPT_USE_TIM3                  FALSE
 #define CH32_GPT_USE_TIM4                  FALSE
-#define CH32_GPT_USE_TIM5                  FALSE
+#define CH32_GPT_USE_TIM5                  TRUE
 #define CH32_GPT_USE_TIM6                  FALSE
 #define CH32_GPT_USE_TIM7                  FALSE
 #define CH32_GPT_USE_TIM8                  FALSE

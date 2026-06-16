@@ -84,8 +84,8 @@
 #define CH32_HAS_CAN2 FALSE
 
 /* DAC attributes.*/
-#define CH32_HAS_DAC1_CH1 FALSE
-#define CH32_HAS_DAC1_CH2 FALSE
+#define CH32_HAS_DAC1_CH1 TRUE
+#define CH32_HAS_DAC1_CH2 TRUE
 
 /* DMA attributes.*/
 #define CH32_HAS_DMA1 TRUE

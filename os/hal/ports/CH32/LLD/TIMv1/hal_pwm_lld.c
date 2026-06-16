@@ -548,11 +548,10 @@ void pwm_lld_start(PWMDriver *pwmp) {
   pwmp->tim->CCER = ccer;
   pwmp->tim->SWEVGR |= TIM_UG;
   pwmp->tim->INTFR = 0;
-  pwmp->tim->DMAINTENR = (pwmp->config->dma_settings << 8) & ~(TIM_CC1IE | TIM_CC2IE | TIM_CC3IE |
-                                               TIM_CC4IE | TIM_UIE);
+  pwmp->tim->DMAINTENR = pwmp->config->dier;
 
   if(pwmp->has_bdtr){
-    pwmp->tim->BDTR |= TIM_MOE;
+    pwmp->tim->BDTR |= pwmp->config->bdtr;
   }
   pwmp->tim->CTLR1 = TIM_CEN|TIM_ARPE|TIM_URS;
 }

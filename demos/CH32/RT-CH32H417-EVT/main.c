@@ -88,7 +88,9 @@ void gpt_default_config_cb(GPTDriver *gptp){
 }
 static const GPTConfig gpt_default_config = {
   .frequency = 10000,
-  .callback = gpt_default_config_cb
+  .callback = gpt_default_config_cb,
+  .dier = TIM_UIE,
+  .cr2 = 0
 };
 static THD_WORKING_AREA(waGPTThread, 1024);
 static THD_FUNCTION(GPTThread, arg){

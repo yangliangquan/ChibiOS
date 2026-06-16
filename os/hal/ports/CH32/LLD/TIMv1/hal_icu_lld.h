@@ -34,7 +34,7 @@
     /* Extension fields.*/                                                                                             \
     TIM_TypeDef *tim;                                                                                                  \
     volatile uint32_t *wccrp;                                                                                          \
-    volatile uint32_t *pccrp;
+    volatile uint32_t *pccrp;                                                                                          
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
 /*===========================================================================*/
