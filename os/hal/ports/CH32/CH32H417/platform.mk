@@ -7,6 +7,7 @@ ifeq ($(CONFDIR),)
 endif
 
 HALCONF := $(strip $(shell cat $(CONFDIR)/halconf.h | egrep -e "\#define"))
+MCUCONF := $(strip $(shell cat $(CONFDIR)/mcuconf.h | egrep -e "\#define"))
 
 PLATFORMSRC := ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f/hal_st_lld.c
@@ -69,7 +70,11 @@ ifneq ($(findstring HAL_USE_UART TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_uart_lld.c
 endif
 ifneq ($(findstring HAL_USE_USB TRUE,$(HALCONF)),)
+ifneq ($(findstring CH32_OTG_USE_USB1 TRUE,$(MCUCONF)),)
+PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1/hal_usb_lld.c
+else
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1/hal_usb_lld.c
+endif
 endif
 ifneq ($(findstring HAL_USE_WDG TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1/hal_wdg_lld.c
@@ -106,6 +111,9 @@ PLATFORMSRC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c \
 endif
 
 # Required include directories
+
+
+ifneq ($(findstring CH32_OTG_USE_USB1 TRUE,$(MCUCONF)),)
 PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
               ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1 \
@@ -123,10 +131,31 @@ PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1
-
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1
+else
+PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
+              ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/ADCv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/CANv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/CRYPv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/DACv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/EFLv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/TIMv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/I2Cv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/SPIv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/MACv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/GPIOv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/RNGv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1
+endif
 # Shared variables
 ALLCSRC += $(PLATFORMSRC)
 ALLINC  += $(PLATFORMINC)

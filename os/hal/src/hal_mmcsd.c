@@ -69,7 +69,10 @@ uint32_t _mmcsd_get_slice(const uint32_t *data,
   startidx = start / 32U;
   startoff = start % 32U;
   endidx   = end / 32U;
-  endmask  = ((uint32_t)1U << ((end % 32U) + 1U)) - 1U;
+  if((end % 32U) != 31U)
+    endmask  = ((uint32_t)1U << ((end % 32U) + 1U)) - 1U;
+  else
+    endmask  = 0xFFFFFFFFU;
 
   /* One or two pieces?*/
   if (startidx < endidx) {

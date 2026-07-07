@@ -245,8 +245,8 @@
 /*
  * SIO driver system settings.
  */
-#define CH32_SIO_USE_USART1             TRUE
-#define CH32_SIO_USE_USART2             FALSE
+#define CH32_SIO_USE_USART1             FALSE
+#define CH32_SIO_USE_USART2             TRUE
 #define CH32_SIO_USE_USART3             FALSE
 #define CH32_SIO_USE_USART4             FALSE
 #define CH32_SIO_USE_USART5             FALSE
@@ -257,8 +257,8 @@
 /*
  * SERIAL driver system settings.
  */
-#define CH32_SERIAL_USE_USART1             FALSE
-#define CH32_SERIAL_USE_USART2             TRUE
+#define CH32_SERIAL_USE_USART1             TRUE
+#define CH32_SERIAL_USE_USART2             FALSE
 #define CH32_SERIAL_USE_USART3             FALSE
 #define CH32_SERIAL_USE_USART4             FALSE
 #define CH32_SERIAL_USE_USART5             FALSE
@@ -286,5 +286,18 @@
  * CRY (crypto) driver system settings.
  */
 #define CH32_CRY_USE_CRY1                  TRUE
+
+/*
+ * SDC driver system settings.
+ */
+#define CH32_SDC_USE_SDC1                  TRUE
+#define CH32_SDC_SDMMC_CLOCK               600000000
+#define CH32_SDC_SDMMC_IRQ_PRIORITY        9
+
+/*
+ * USB (OTG) driver system settings.
+ */
+#define CH32_OTG_USE_USB1                  TRUE
+#define CH32_USB_OTG1_IRQ_PRIORITY         14
 
 #endif /* MCUCONF_H */

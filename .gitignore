@@ -1,2 +1,5 @@
 .vscode/
 .venv/
+tempdoc/
+*build/
+*\.dep/

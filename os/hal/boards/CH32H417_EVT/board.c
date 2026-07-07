@@ -50,3 +50,39 @@ void __early_init(void) {
  */
 void boardInit(void) {
 }
+
+/**
+ * @brief   Card insertion detection.
+ * @note    The CH32H417 EVT board may not have a dedicated card detect
+ *          pin. Override this function if card detection is available.
+ *
+ * @param[in] sdcp      pointer to the @p SDCDriver object
+ * @return              The operation status.
+ * @retval TRUE         card is inserted.
+ * @retval FALSE        card is not inserted.
+ */
+bool sdc_lld_is_card_inserted(SDCDriver *sdcp) {
+
+  (void)sdcp;
+
+  /* Return TRUE to always indicate card present.
+     Override with proper GPIO detection if available.*/
+  return true;
+}
+
+/**
+ * @brief   Write protection detection.
+ * @note    The CH32H417 EVT board does not have a write protect switch.
+ *
+ * @param[in] sdcp      pointer to the @p SDCDriver object
+ * @return              The operation status.
+ * @retval TRUE         card is write-protected.
+ * @retval FALSE        card is not write-protected.
+ */
+bool sdc_lld_is_write_protected(SDCDriver *sdcp) {
+
+  (void)sdcp;
+
+  /* Return FALSE to indicate no write protection.*/
+  return false;
+}

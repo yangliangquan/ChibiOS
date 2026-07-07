@@ -190,6 +190,8 @@ enum {
 /* SDMMC attributes.*/
 #define CH32_HAS_SDMMC1 TRUE
 #define CH32_HAS_SDMMC2 FALSE
+#define CH32_SDMMC_HANDLER SDMMC_IRQHandler
+#define CH32_SDMMC_NUMBER SDMMC_IRQn
 
 /* SPI attributes.*/
 #define CH32_HAS_SPI1 TRUE

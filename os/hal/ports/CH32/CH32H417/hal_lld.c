@@ -73,7 +73,7 @@ const halclkcfg_t hal_clkcfg_default = {
   .HPRE = RCC_HPRE_DIV4,
   .FPRE = RCC_FPRE_DIV1,
   .SYSPLL_SEL = RCC_SYSPLL_PLL,
-  .PLLMUL = RCC_PLLMUL16,
+  .PLLMUL = RCC_PLLMUL24,
   .PLLDIV = RCC_PLL_SRC_DIV1,
   .PLLSRC = RCC_PLLSRC_HSE
 };

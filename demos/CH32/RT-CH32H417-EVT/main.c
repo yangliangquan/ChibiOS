@@ -14,10 +14,13 @@
     limitations under the License.
 */
 
+#include <string.h>
+
 #include "ch.h"
 #include "hal.h"
 #include "usbcfg.h"
 #include "chprintf.h"
+#include "ff.h"
 
 static const SIOConfig sio_cfg = {
   .baud  = 115200,
@@ -30,9 +33,9 @@ static THD_FUNCTION(SIOThread, arg){
     (void)arg;
     chRegSetThreadName("SIOThread");
     palSetPadMode(GPIOA, GPIO_PIN9, PAL_CH32_ALTERNATE_PUSHPULL(7));
-    sioStart(&SIOD1, &sio_cfg);
+    sioStart(&SIOD2, &sio_cfg);
     while(true){
-        sioAsyncWrite(&SIOD1, (const uint8_t *)"Hello from SIOThread!\r\n", 24);
+        sioAsyncWrite(&SIOD2, (const uint8_t *)"Hello from SIOThread!\r\n", 24);
         chThdSleepMilliseconds(500);
     }
 }
@@ -181,17 +184,17 @@ static THD_FUNCTION(SerialThread, arg) {
   chRegSetThreadName("SerialThread");
 
   /* Configure USART2 TX (PA2) and RX (PA3), AF7 for USART2 on CH32H417.*/
-  palSetPadMode(GPIOA, GPIO_PIN2, PAL_CH32_ALTERNATE_PUSHPULL(7));
+  palSetPadMode(GPIOA, GPIO_PIN9, PAL_CH32_ALTERNATE_PUSHPULL(7));
   palSetPadMode(GPIOA, GPIO_PIN3, PAL_CH32_ALTERNATE_INPUT(7));
 
   /* Start Serial driver on USART2.*/
-  sdStart(&SD2, &serial_cfg);
+  sdStart(&SD1, &serial_cfg);
 
   /* Use SD2 as a BaseSequentialStream for chprintf.*/
-  BaseSequentialStream *chp = (BaseSequentialStream *)&SD2;
+  BaseSequentialStream *chp = (BaseSequentialStream *)&SD1;
 
   while (true) {
-    chprintf(chp, "Hello from SerialThread! (SD2 USART2)\r\n");
+    // chprintf(chp, "Hello from SerialThread! (SD1 USART1)\r\n");
     chThdSleepMilliseconds(1000);
   }
 }
@@ -710,6 +713,603 @@ static THD_FUNCTION(CANThread, arg) {
   }
 }
 
+/*===========================================================================*/
+/* SDC driver (SD Card) related.                                             */
+/*===========================================================================*/
+
+/*
+ * SDC / FatFS test selection.
+ * Define CH32_DEMO_USE_FATFS to use the FatFS test thread instead of the
+ * raw SDC read/write test thread.
+ */
+#define CH32_DEMO_USE_FATFS           1
+
+/*===========================================================================*/
+/* SDC raw read/write test thread.                                          */
+/*===========================================================================*/
+#if !CH32_DEMO_USE_FATFS || defined(__DOXYGEN__)
+/*
+ * SDC test thread.
+ * Tests SD card with comprehensive read/write verification:
+ *   - Read block 0 (MBR) for basic read test
+ *   - Write/read-back verification with various data patterns
+ *   - Multi-block read/write test
+ *   - Walking-bit and incrementing-byte pattern tests
+ *
+ * Use SDC_TEST_WRITE_BLK as the target block for write tests.
+ * WARNING: write tests are destructive - data on the target block
+ * will be overwritten. Pick a block that does not contain useful data.
+ *
+ * Default SDMMC pin mapping (AFIO_PCFR1_SDMMC_REMAP = 0):
+ *   SDCK  = PC12, SDCMD = PD2
+ *   SDD0  = PC8,  SDD1  = PC9
+ *   SDD2  = PC10, SDD3  = PC11
+ *
+ * SDMMC alternate function: AF12 on CH32H417.
+ */
+
+/* Target block for write/verify tests (must not overlap MBR/filesystem). */
+#define SDC_TEST_WRITE_BLK           0U
+
+/* Number of blocks for multi-block read/write test. */
+#define SDC_TEST_MULTI_BLKS          1U
+
+/* Enable(=1) or disable(=0) write tests (destructive to test block). */
+#define SDC_ENABLE_WRITE_TEST        1
+
+static THD_WORKING_AREA(waSDCThread, 4096 * 2);
+static THD_FUNCTION(SDCThread, arg) {
+  (void)arg;
+  uint32_t blk_cnt   = 0;
+  uint32_t rd_cnt    = 0;
+  uint32_t wr_cnt    = 0;
+  uint32_t vfy_cnt   = 0;
+  uint32_t err_cnt   = 0;
+  BlockDeviceInfo info;
+  __attribute__((aligned(16))) uint8_t  buf[MMCSD_BLOCK_SIZE];
+  __attribute__((aligned(16))) uint8_t  ref[MMCSD_BLOCK_SIZE];
+  uint32_t i;
+  msg_t    result;
+
+  chRegSetThreadName("SDCThread");
+
+  /* Configure SDMMC GPIO pins, AF12 for SDMMC on CH32H417. */
+  palSetPadMode(GPIOC, GPIO_PIN12, PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDCK  */
+  palSetPadMode(GPIOD, GPIO_PIN2,  PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDCMD */
+  palSetPadMode(GPIOC, GPIO_PIN8,  PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDD0  */
+  palSetPadMode(GPIOC, GPIO_PIN9,  PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDD1  */
+  palSetPadMode(GPIOC, GPIO_PIN10, PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDD2  */
+  palSetPadMode(GPIOC, GPIO_PIN11, PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDD3  */
+
+  enableHB1(RCC_PWREN);
+  enableHB1(RCC_SWPMIEN);
+
+  SWPMI->OR |= 1 << 0;
+
+  PWR->CTLR &= ~PWR_CTLR_VIO_SWCR;
+  PWR->CTLR |= 0x00000200;
+
+  PWR->CTLR &= ~PWR_CTLR_VSEL_VIO18;
+  PWR->CTLR |= 0x00000C00;
+
+  /* Start the SDC driver with default configuration (4-bit mode). */
+  chprintf((BaseSequentialStream *)&SD1, "SDC: Start SDC driver\r\n");
+  sdcStart(&SDCD1, NULL);
+
+  /* Short delay for card power-up. */
+  chThdSleepMilliseconds(100);
+
+  while (true) {
+    chprintf((BaseSequentialStream *)&SD1, "SDC: Entry\r\n");
+
+    /*------------------------------------------------------------------------*/
+    /* 1. Check card insertion.                                              */
+    /*------------------------------------------------------------------------*/
+    if (!sdcIsCardInserted(&SDCD1)) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC: No card inserted\r\n");
+      chThdSleepMilliseconds(2000);
+      continue;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 2. Connect to the SD card.                                            */
+    /*------------------------------------------------------------------------*/
+    result = sdcConnect(&SDCD1);
+    if (result != HAL_SUCCESS) {
+
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC: Connect failed, errors=0x%08lx\r\n",
+               (unsigned long)SDCD1.errors);
+      
+      chThdSleepMilliseconds(2000);
+      continue;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 3. Get card info.                                                     */
+    /*------------------------------------------------------------------------*/
+    if (sdcGetInfo(&SDCD1, &info) == HAL_SUCCESS) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC: Capacity: %lu blocks, %u bytes/block, total %lu KB\r\n",
+               (unsigned long)info.blk_num, info.blk_size,
+               (unsigned long long)((uint64_t)info.blk_num *
+                                    (uint64_t)info.blk_size / 1024));
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 4. Read block 0 (MBR).                                               */
+    /*------------------------------------------------------------------------*/
+    chprintf((BaseSequentialStream *)&SD1, "SDC: Test 1 - Read block 0 (MBR)\r\n");
+
+    if (sdcRead(&SDCD1, 0, buf, 1) == HAL_SUCCESS) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   OK [%02x %02x %02x %02x %02x %02x %02x %02x "
+                      "%02x %02x %02x %02x %02x %02x %02x %02x ...]\r\n",
+               buf[0],  buf[1],  buf[2],  buf[3],
+               buf[4],  buf[5],  buf[6],  buf[7],
+               buf[8],  buf[9],  buf[10], buf[11],
+               buf[12], buf[13], buf[14], buf[15]);
+      rd_cnt++;
+      blk_cnt++;
+    }
+    else {
+      sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   FAILED, errors=0x%08lx\r\n", (unsigned long)err);
+      err_cnt++;
+      goto sdc_cleanup;
+    }
+
+#if SDC_ENABLE_WRITE_TEST
+    /*----------------------------------------------------------------------*/
+    /* 5. Write pattern to test block and read back to verify.             */
+    /*    Pattern: incrementing byte values 0x00..0xFF, repeated.          */
+    /*----------------------------------------------------------------------*/
+    chprintf((BaseSequentialStream *)&SD1,
+             "SDC: Test 2 - Write incrementing-byte pattern to block %u\r\n",
+             SDC_TEST_WRITE_BLK);
+
+    for (i = 0; i < MMCSD_BLOCK_SIZE; i++) {
+      buf[i] = (uint8_t)i;
+    }
+
+    if (sdcWrite(&SDCD1, SDC_TEST_WRITE_BLK, buf, 1) != HAL_SUCCESS) {
+      sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   Write FAILED, errors=0x%08lx\r\n", (unsigned long)err);
+      err_cnt++;
+      goto sdc_cleanup;
+    }
+    wr_cnt++;
+
+    /* Read back and verify. */
+    memset(ref, 0, MMCSD_BLOCK_SIZE);
+    if (sdcRead(&SDCD1, SDC_TEST_WRITE_BLK, ref, 1) != HAL_SUCCESS) {
+      sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   Read-back FAILED, errors=0x%08lx\r\n",
+               (unsigned long)err);
+      err_cnt++;
+      goto sdc_cleanup;
+    }
+    rd_cnt++;
+
+    if (memcmp(buf, ref, MMCSD_BLOCK_SIZE) == 0) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   Verify PASSED (%u bytes match)\r\n",
+               MMCSD_BLOCK_SIZE);
+      vfy_cnt++;
+    }
+    else {
+      /* Find first mismatch. */
+      for (i = 0; i < MMCSD_BLOCK_SIZE; i++) {
+        if (buf[i] != ref[i]) {
+          break;
+        }
+      }
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   Verify FAILED at offset %u "
+               "(expected 0x%02x, got 0x%02x)\r\n",
+               i, buf[i], ref[i]);
+      err_cnt++;
+      goto sdc_cleanup;
+    }
+    blk_cnt++;
+
+    /*--------------------------------------------------------------------*/
+    /* 6. Walking-bit pattern test.                                      */
+    /*--------------------------------------------------------------------*/
+    chprintf((BaseSequentialStream *)&SD1,
+             "SDC: Test 3 - Walking-bit pattern (block %u)\r\n",
+             SDC_TEST_WRITE_BLK + 1);
+
+    for (i = 0; i < MMCSD_BLOCK_SIZE; i++) {
+      buf[i] = (uint8_t)(1UL << (i & 7));
+    }
+
+    if (sdcWrite(&SDCD1, SDC_TEST_WRITE_BLK + 1, buf, 1) != HAL_SUCCESS) {
+      sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   Write FAILED, errors=0x%08lx\r\n", (unsigned long)err);
+      err_cnt++;
+      goto sdc_cleanup;
+    }
+    wr_cnt++;
+
+    memset(ref, 0, MMCSD_BLOCK_SIZE);
+    if (sdcRead(&SDCD1, SDC_TEST_WRITE_BLK + 1, ref, 1) != HAL_SUCCESS) {
+      sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   Read-back FAILED, errors=0x%08lx\r\n",
+               (unsigned long)err);
+      err_cnt++;
+      goto sdc_cleanup;
+    }
+    rd_cnt++;
+
+    if (memcmp(buf, ref, MMCSD_BLOCK_SIZE) == 0) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   Verify PASSED (%u bytes match)\r\n",
+               MMCSD_BLOCK_SIZE);
+      vfy_cnt++;
+    }
+    else {
+      for (i = 0; i < MMCSD_BLOCK_SIZE; i++) {
+        if (buf[i] != ref[i]) {
+          break;
+        }
+      }
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   Verify FAILED at offset %u "
+               "(expected 0x%02x, got 0x%02x)\r\n",
+               i, buf[i], ref[i]);
+      err_cnt++;
+      goto sdc_cleanup;
+    }
+    blk_cnt++;
+
+    /*--------------------------------------------------------------------*/
+    /* 7. Multi-block read/write test (SDC_TEST_MULTI_BLKS blocks).       */
+    /*--------------------------------------------------------------------*/
+    chprintf((BaseSequentialStream *)&SD1,
+             "SDC: Test 4 - Multi-block (%u blocks) starting at block %u\r\n",
+             SDC_TEST_MULTI_BLKS, SDC_TEST_WRITE_BLK + 2);
+
+    /* Prepare reference data: each block filled with its block-number byte. */
+    {
+      uint32_t b;
+      for (b = 0; b < SDC_TEST_MULTI_BLKS; b++) {
+        memset(buf, (uint8_t)(b & 0xFF), MMCSD_BLOCK_SIZE);
+        if (sdcWrite(&SDCD1, SDC_TEST_WRITE_BLK + 2 + b, buf, 1)
+            != HAL_SUCCESS) {
+          sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+          chprintf((BaseSequentialStream *)&SD1,
+                   "SDC:   Write block %u FAILED, errors=0x%08lx\r\n",
+                   SDC_TEST_WRITE_BLK + 2 + b, (unsigned long)err);
+          err_cnt++;
+          goto sdc_cleanup;
+        }
+        wr_cnt++;
+      }
+    }
+
+    /* Read back all blocks at once and verify individually. */
+    {
+      uint8_t multi_buf[MMCSD_BLOCK_SIZE * SDC_TEST_MULTI_BLKS];
+      uint32_t b;
+
+      if (sdcRead(&SDCD1, SDC_TEST_WRITE_BLK + 2,
+                  multi_buf, SDC_TEST_MULTI_BLKS) != HAL_SUCCESS) {
+        sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+        chprintf((BaseSequentialStream *)&SD1,
+                 "SDC:   Multi-block read FAILED, errors=0x%08lx\r\n",
+                 (unsigned long)err);
+        err_cnt++;
+        goto sdc_cleanup;
+      }
+      rd_cnt++;
+
+      for (b = 0; b < SDC_TEST_MULTI_BLKS; b++) {
+        const uint8_t *blk = multi_buf + (b * MMCSD_BLOCK_SIZE);
+        uint8_t expected = (uint8_t)(b & 0xFF);
+        bool ok = true;
+
+        for (i = 0; i < MMCSD_BLOCK_SIZE; i++) {
+          if (blk[i] != expected) {
+            ok = false;
+            break;
+          }
+        }
+
+        if (ok) {
+          vfy_cnt++;
+        }
+        else {
+          chprintf((BaseSequentialStream *)&SD1,
+                   "SDC:   Block %u verify FAILED at offset %u "
+                   "(expected 0x%02x, got 0x%02x)\r\n",
+                   SDC_TEST_WRITE_BLK + 2 + b, i, expected, blk[i]);
+          err_cnt++;
+          goto sdc_cleanup;
+        }
+      }
+
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDC:   Multi-block verify PASSED (%u blocks)\r\n",
+               SDC_TEST_MULTI_BLKS);
+      blk_cnt += SDC_TEST_MULTI_BLKS;
+    }
+#endif /* SDC_ENABLE_WRITE_TEST */
+
+    /*------------------------------------------------------------------------*/
+    /* 8. Summary.                                                           */
+    /*------------------------------------------------------------------------*/
+    palTogglePad(GPIOD, GPIO_PIN4);
+
+sdc_cleanup:
+    sdcDisconnect(&SDCD1);
+
+    chprintf((BaseSequentialStream *)&SD1,
+             "SDC: === Summary: %lu blk xfers, "
+             "%lu reads, %lu writes, %lu verifies, %lu errors ===\r\n",
+             (unsigned long)blk_cnt,
+             (unsigned long)rd_cnt,
+             (unsigned long)wr_cnt,
+             (unsigned long)vfy_cnt,
+             (unsigned long)err_cnt);
+
+    chThdSleepMilliseconds(3000);
+  }
+}
+#endif /* !CH32_DEMO_USE_FATFS */
+
+/*===========================================================================*/
+/* FatFS test thread.                                                        */
+/*===========================================================================*/
+#if CH32_DEMO_USE_FATFS || defined(__DOXYGEN__)
+
+static FATFS SDC_FS;
+__attribute__((aligned(4))) uint8_t work[512];
+static THD_WORKING_AREA(waFatFSThread, 4096 * 2);
+static THD_FUNCTION(FatFSThread, arg) {
+  (void)arg;
+  FRESULT err;
+  
+  chRegSetThreadName("FatFSThread");
+
+  /* Configure SDMMC GPIO pins, AF12 for SDMMC on CH32H417. */
+  palSetPadMode(GPIOC, GPIO_PIN12, PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDCK  */
+  palSetPadMode(GPIOD, GPIO_PIN2,  PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDCMD */
+  palSetPadMode(GPIOC, GPIO_PIN8,  PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDD0  */
+  palSetPadMode(GPIOC, GPIO_PIN9,  PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDD1  */
+  palSetPadMode(GPIOC, GPIO_PIN10, PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDD2  */
+  palSetPadMode(GPIOC, GPIO_PIN11, PAL_MODE_CH32_ALTERNATE_PUSHPULL); /* SDD3  */
+
+  enableHB1(RCC_PWREN);
+  enableHB1(RCC_SWPMIEN);
+
+  SWPMI->OR |= 1 << 0;
+
+  PWR->CTLR &= ~PWR_CTLR_VIO_SWCR;
+  PWR->CTLR |= 0x00000200;
+
+  PWR->CTLR &= ~PWR_CTLR_VSEL_VIO18;
+  PWR->CTLR |= 0x00000C00;
+
+  /* Start the SDC driver with default configuration (4-bit mode). */
+  chprintf((BaseSequentialStream *)&SD1, "FatFS: Start SDC driver\r\n");
+  sdcStart(&SDCD1, NULL);
+
+  /* Short delay for card power-up. */
+  chThdSleepMilliseconds(100);
+
+  while (true) {
+    chprintf((BaseSequentialStream *)&SD1, "FatFS: Entry\r\n");
+
+    /*------------------------------------------------------------------------*/
+    /* 1. Check card insertion.                                              */
+    /*------------------------------------------------------------------------*/
+    if (!sdcIsCardInserted(&SDCD1)) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "FatFS: No card inserted\r\n");
+      chThdSleepMilliseconds(2000);
+      continue;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 2. Connect to the SD card.                                            */
+    /*------------------------------------------------------------------------*/
+    if (sdcConnect(&SDCD1) != HAL_SUCCESS) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "FatFS: Connect failed, errors=0x%08lx\r\n",
+               (unsigned long)SDCD1.errors);
+      chThdSleepMilliseconds(2000);
+      continue;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 3. Mount FatFS.                                                       */
+    /*------------------------------------------------------------------------*/
+    chprintf((BaseSequentialStream *)&SD1, "FatFS: Mounting...\r\n");
+    err = f_mount(&SDC_FS, "/", 1);
+
+    if (err == FR_NO_FILESYSTEM) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "FatFS: No filesystem, formatting...\r\n");
+      /* Format the card as FAT32 with auto cluster size. */
+      MKFS_PARM mkfs_opt = {
+        .fmt     = FM_FAT32,
+        .n_fat   = 0,    /* auto */
+        .align   = 0,    /* auto */
+        .n_root  = 0,    /* auto */
+        .au_size = 0,    /* auto */
+      };
+      err = f_mkfs("/", &mkfs_opt, work, sizeof work);
+      if (err != FR_OK) {
+        chprintf((BaseSequentialStream *)&SD1,
+                 "FatFS: Format failed (%d)\r\n", err);
+        sdcDisconnect(&SDCD1);
+        chThdSleepMilliseconds(3000);
+        continue;
+      }
+      chprintf((BaseSequentialStream *)&SD1,
+               "FatFS: Format OK, remounting...\r\n");
+      err = f_mount(&SDC_FS, "0:", 1);
+    }
+
+    if (err != FR_OK) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "FatFS: Mount failed (%d)\r\n", err);
+      sdcDisconnect(&SDCD1);
+      chThdSleepMilliseconds(3000);
+      continue;
+    }
+    chprintf((BaseSequentialStream *)&SD1, "FatFS: Mount OK\r\n");
+
+    /*------------------------------------------------------------------------*/
+    /* 4. Create/open a test file and write data.                             */
+    /*------------------------------------------------------------------------*/
+    {
+      uint8_t write_buf[256];
+      uint8_t read_buf[256];
+      UINT bw, br;
+      uint32_t i;
+
+      for (i = 0; i < sizeof(write_buf); i++) {
+        write_buf[i] = (uint8_t)i;
+      }
+
+      chprintf((BaseSequentialStream *)&SD1,
+               "FatFS: Writing test file 'fatfs_test.bin'...\r\n");
+
+      FIL fil;
+
+      err = f_open(&fil, "fatfs_test.bin", FA_CREATE_ALWAYS | FA_WRITE);
+      if (err != FR_OK) {
+        chprintf((BaseSequentialStream *)&SD1,
+                 "FatFS: f_open(fatfs_test.bin) failed (%d)\r\n", err);
+        goto fatfs_cleanup;
+      }
+
+      err = f_write(&fil, write_buf, sizeof(write_buf), &bw);
+      if ((err != FR_OK) || (bw != sizeof(write_buf))) {
+        chprintf((BaseSequentialStream *)&SD1,
+                 "FatFS: f_write failed (%d, bw=%u)\r\n", err, bw);
+        f_close(&fil);
+        goto fatfs_cleanup;
+      }
+      chprintf((BaseSequentialStream *)&SD1,
+               "FatFS: Wrote %u bytes OK\r\n", bw);
+
+      f_close(&fil);
+
+      /*--------------------------------------------------------------------*/
+      /* 5. Read back and verify.                                           */
+      /*--------------------------------------------------------------------*/
+      err = f_open(&fil, "fatfs_test.bin", FA_READ);
+      if (err != FR_OK) {
+        chprintf((BaseSequentialStream *)&SD1,
+                 "FatFS: f_open(fatfs_test.bin) for read failed (%d)\r\n",
+                 err);
+        goto fatfs_cleanup;
+      }
+
+      memset(read_buf, 0, sizeof(read_buf));
+      err = f_read(&fil, read_buf, sizeof(read_buf), &br);
+      if ((err != FR_OK) || (br != sizeof(read_buf))) {
+        chprintf((BaseSequentialStream *)&SD1,
+                 "FatFS: f_read failed (%d, br=%u)\r\n", err, br);
+        f_close(&fil);
+        goto fatfs_cleanup;
+      }
+      f_close(&fil);
+
+      if (memcmp(write_buf, read_buf, sizeof(write_buf)) == 0) {
+        palTogglePad(GPIOD, GPIO_PIN4);
+        chprintf((BaseSequentialStream *)&SD1,
+                 "FatFS: Verify PASSED (%u bytes match)\r\n",
+                 sizeof(write_buf));
+      }
+      else {
+        for (i = 0; i < sizeof(write_buf); i++) {
+          if (write_buf[i] != read_buf[i]) {
+            break;
+          }
+        }
+        chprintf((BaseSequentialStream *)&SD1,
+                 "FatFS: Verify FAILED at offset %u "
+                 "(expected 0x%02x, got 0x%02x)\r\n",
+                 i, write_buf[i], read_buf[i]);
+        goto fatfs_cleanup;
+      }
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 6. List root directory.                                               */
+    /*------------------------------------------------------------------------*/
+    {
+      DIR dir;
+      FILINFO fno;
+      FRESULT res;
+
+      chprintf((BaseSequentialStream *)&SD1,
+               "FatFS: Listing root directory:\r\n");
+
+      res = f_opendir(&dir, "0:");
+      if (res == FR_OK) {
+        while (1) {
+          res = f_readdir(&dir, &fno);
+          if ((res != FR_OK) || (fno.fname[0] == 0)) {
+            break;
+          }
+          if (fno.fattrib & AM_DIR) {
+            chprintf((BaseSequentialStream *)&SD1,
+                     "  [DIR]  %s\r\n", fno.fname);
+          }
+          else {
+            chprintf((BaseSequentialStream *)&SD1,
+                     "  [FILE] %-12s %lu bytes\r\n",
+                     fno.fname, (unsigned long)fno.fsize);
+          }
+        }
+        f_closedir(&dir);
+      }
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 7. Get free space.                                                    */
+    /*------------------------------------------------------------------------*/
+    {
+      uint32_t fre_clust;
+      FATFS *fsp;
+
+      err = f_getfree("0:", &fre_clust, &fsp);
+      if (err == FR_OK) {
+        uint32_t bytes_free = fre_clust * (uint32_t)fsp->csize *
+                              MMCSD_BLOCK_SIZE;
+        chprintf((BaseSequentialStream *)&SD1,
+                 "FatFS: Free: %lu clusters, %lu KB\r\n",
+                 (unsigned long)fre_clust,
+                 (unsigned long)(bytes_free / 1024));
+      }
+    }
+
+fatfs_cleanup:
+    /*------------------------------------------------------------------------*/
+    /* 8. Unmount and disconnect.                                            */
+    /*------------------------------------------------------------------------*/
+    f_mount(NULL, "0:", 0);
+    sdcDisconnect(&SDCD1);
+
+    chprintf((BaseSequentialStream *)&SD1,
+             "FatFS: ============ Test cycle done ============\r\n");
+
+    chThdSleepMilliseconds(5000);
+  }
+}
+#endif /* CH32_DEMO_USE_FATFS */
+
 static void cmd_hello(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void)argc;
   (void)argv;
@@ -764,18 +1364,25 @@ int main(void)
      * Creates the example thread.
      */
     chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
-    chThdCreateStatic(waADCThread, sizeof(waADCThread), NORMALPRIO, ADCThread, NULL);
-    chThdCreateStatic(waGPTThread, sizeof(waGPTThread), NORMALPRIO, GPTThread, NULL);
-    chThdCreateStatic(waPWMThread, sizeof(waPWMThread), NORMALPRIO, PWMThread, NULL);
-    chThdCreateStatic(waICUThread, sizeof(waICUThread), NORMALPRIO, ICUThread, NULL);
-    chThdCreateStatic(waSIOThread, sizeof(waSIOThread), NORMALPRIO, SIOThread, NULL);
+    // chThdCreateStatic(waADCThread, sizeof(waADCThread), NORMALPRIO, ADCThread, NULL);
+    // chThdCreateStatic(waGPTThread, sizeof(waGPTThread), NORMALPRIO, GPTThread, NULL);
+    // chThdCreateStatic(waPWMThread, sizeof(waPWMThread), NORMALPRIO, PWMThread, NULL);
+    // chThdCreateStatic(waICUThread, sizeof(waICUThread), NORMALPRIO, ICUThread, NULL);
+    // chThdCreateStatic(waSIOThread, sizeof(waSIOThread), NORMALPRIO, SIOThread, NULL);
     chThdCreateStatic(waSerialThread, sizeof(waSerialThread), NORMALPRIO, SerialThread, NULL);
-    chThdCreateStatic(waUARTThread, sizeof(waUARTThread), NORMALPRIO, UARTThread, NULL);
-    chThdCreateStatic(waSPIThread, sizeof(waSPIThread), NORMALPRIO, SPIThread, NULL);
+    // chThdCreateStatic(waUARTThread, sizeof(waUARTThread), NORMALPRIO, UARTThread, NULL);
+    // chThdCreateStatic(waSPIThread, sizeof(waSPIThread), NORMALPRIO, SPIThread, NULL);
     // chThdCreateStatic(waI2CThread, sizeof(waI2CThread), NORMALPRIO, I2CThread, NULL);
-    chThdCreateStatic(waI2SThread, sizeof(waI2SThread), NORMALPRIO, I2SThread, NULL);
-    chThdCreateStatic(waDACThread, sizeof(waDACThread), NORMALPRIO, DACThread, NULL);
-    chThdCreateStatic(waCANThread, sizeof(waCANThread), NORMALPRIO, CANThread, NULL);
+    // chThdCreateStatic(waI2SThread, sizeof(waI2SThread), NORMALPRIO, I2SThread, NULL);
+    // chThdCreateStatic(waDACThread, sizeof(waDACThread), NORMALPRIO, DACThread, NULL);
+    // chThdCreateStatic(waCANThread, sizeof(waCANThread), NORMALPRIO, CANThread, NULL);
+#if CH32_DEMO_USE_FATFS
+    chThdCreateStatic(waFatFSThread, sizeof(waFatFSThread),
+                      NORMALPRIO - 1, FatFSThread, NULL);
+#else
+    chThdCreateStatic(waSDCThread, sizeof(waSDCThread),
+                      NORMALPRIO - 1, SDCThread, NULL);
+#endif
 
     /*
      * Normal main() thread activity, in this demo it does nothing except

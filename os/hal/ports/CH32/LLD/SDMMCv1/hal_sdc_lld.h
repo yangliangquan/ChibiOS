@@ -15,7 +15,7 @@
 */
 
 /**
- * @file    hal_sdc_lld.h
+ * @file    SDMMCv1/hal_sdc_lld.h
  * @brief   CH32 SDC subsystem low level driver header.
  *
  * @addtogroup SDC
@@ -25,7 +25,7 @@
 #ifndef HAL_SDC_LLD_H
 #define HAL_SDC_LLD_H
 
-#if (HAL_USE_SDC == TRUE) || defined(__DOXYGEN__)
+#if HAL_USE_SDC || defined(__DOXYGEN__)
 
 /*===========================================================================*/
 /* Driver constants.                                                         */
@@ -36,16 +36,46 @@
 /*===========================================================================*/
 
 /**
- * @name    CH32 configuration options
+ * @name    Configuration options
  * @{
  */
 /**
- * @brief   SDCD1 driver enable switch.
+ * @brief   SDC1 driver enable switch.
  * @details If set to @p TRUE the support for SDC1 is included.
  * @note    The default is @p FALSE.
  */
 #if !defined(CH32_SDC_USE_SDC1) || defined(__DOXYGEN__)
-#define CH32_SDC_USE_SDC1                  FALSE
+#define CH32_SDC_USE_SDC1                   FALSE
+#endif
+
+/**
+ * @brief   Write timeout in milliseconds.
+ */
+#if !defined(CH32_SDC_WRITE_TIMEOUT) || defined(__DOXYGEN__)
+#define CH32_SDC_WRITE_TIMEOUT              10000
+#endif
+
+/**
+ * @brief   Read timeout in milliseconds.
+ */
+#if !defined(CH32_SDC_READ_TIMEOUT) || defined(__DOXYGEN__)
+#define CH32_SDC_READ_TIMEOUT               10000
+#endif
+
+/**
+ * @brief   Card clock activation delay in milliseconds.
+ */
+#if !defined(CH32_SDC_CLOCK_DELAY) || defined(__DOXYGEN__)
+#define CH32_SDC_CLOCK_DELAY                10
+#endif
+
+/**
+ * @brief   Support for unaligned transfers.
+ * @note    Unaligned transfers are much slower because a bounce buffer
+ *          is used.
+ */
+#if !defined(CH32_SDC_UNALIGNED_SUPPORT) || defined(__DOXYGEN__)
+#define CH32_SDC_UNALIGNED_SUPPORT          TRUE
 #endif
 /** @} */
 
@@ -74,7 +104,6 @@ typedef struct SDCDriver SDCDriver;
 
 /**
  * @brief   Driver configuration structure.
- * @note    It could be empty on some architectures.
  */
 typedef struct {
   /**
@@ -111,23 +140,39 @@ struct SDCDriver {
   /**
    * @brief Current configuration data.
    */
-  const SDCConfig           *config;
+  const SDCConfig            *config;
   /**
    * @brief Various flags regarding the mounted card.
    */
-  sdcmode_t                 cardmode;
+  sdcmode_t                  cardmode;
   /**
    * @brief Errors flags.
    */
-  sdcflags_t                errors;
+  sdcflags_t                 errors;
   /**
    * @brief Card RCA.
    */
-  uint32_t                  rca;
+  uint32_t                   rca;
   /**
-   * @brief   Buffer for internal operations.
+   * @brief   Pointer to the SDMMC registers block.
    */
-  uint8_t                   buf[MMCSD_BLOCK_SIZE];
+  SDMMC_TypeDef              *sdmmc;
+  /**
+   * @brief   SDMMC peripheral clock frequency.
+   */
+  uint32_t                   clkfreq;
+  /**
+   * @brief   Transaction thread reference, used in I-class APIs.
+   */
+  thread_reference_t         thread;
+  /**
+   * @brief   Buffer for internal operations (bounce buffer).
+   */
+  uint8_t                    *buf;
+  /**
+   * @brief   Word buffer for response polling of internal operations.
+   */
+  uint32_t                   *resp;
   /* End of the mandatory fields.*/
 };
 
@@ -173,7 +218,7 @@ extern "C" {
 }
 #endif
 
-#endif /* HAL_USE_SDC == TRUE */
+#endif /* HAL_USE_SDC */
 
 #endif /* HAL_SDC_LLD_H */
 
