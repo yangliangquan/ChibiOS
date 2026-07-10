@@ -11,10 +11,10 @@ MEMORY
 
 	/*FLASH, RAM, and RAM-CODE can be freely configured according to project 
 	requirements;Please refer to the datasheet manual for specific allocation*/
-	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 128K             /* zero_wait flah ,and loaded into RAM_CODE for running */
-	RAM_CODE (xrw) : ORIGIN = 0x20100000, LENGTH = 128K         /* RAM for running code*/
-	RAM (xrw) : ORIGIN = (0x20120000+1024), LENGTH = (448K-1024-64K) /* RAM for .data .bss section and other*/
-	RAM_LOAD (xrw) : ORIGIN = 0x20120000, LENGTH = 1024         /* RAM for .load section*/
+	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 256K             /* zero_wait flah ,and loaded into RAM_CODE for running */
+	RAM_CODE (xrw) : ORIGIN = 0x20180000 - 256K, LENGTH = 256K         /* RAM for running code*/
+	RAM (xrw) : ORIGIN = 0x20180000 - 256K - 128K + 1024, LENGTH = 128K - 1024 /* RAM for .data .bss section and other*/
+	RAM_LOAD (xrw) : ORIGIN = 0x20180000 - 256K - 128K, LENGTH = 1024         /* RAM for .load section*/
 }
 
 SECTIONS

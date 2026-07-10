@@ -1326,7 +1326,7 @@ static const ShellConfig shell_cfg = {
   commands                      
 };
 
-#define SHELL_WA_SIZE THD_WORKING_AREA_SIZE(1024)
+#define SHELL_WA_SIZE THD_WORKING_AREA_SIZE(2048)
 
 /*
  * Application entry point.
@@ -1347,18 +1347,18 @@ int main(void)
     /*
      * Initializes a serial-over-USB CDC driver.
      */
-    // sduObjectInit(&SDU1);
-    // sduStart(&SDU1, &serusbcfg);
+    sduObjectInit(&SDU1);
+    sduStart(&SDU1, &serusbcfg);
 
     /*
      * Activates the USB driver and then the USB bus pull-up on D+.
      * Note, a delay is inserted in order to not have to disconnect the cable
      * after a reset.
      */
-    // usbDisconnectBus(serusbcfg.usbp);
+    usbDisconnectBus(serusbcfg.usbp);
     // chThdSleepMilliseconds(1500);
-    // usbStart(serusbcfg.usbp, &usbcfg);
-    // usbConnectBus(serusbcfg.usbp);
+    usbStart(serusbcfg.usbp, &usbcfg);
+    usbConnectBus(serusbcfg.usbp);
 
     /*
      * Creates the example thread.
@@ -1390,12 +1390,12 @@ int main(void)
      */
     while (true)
     {
-        // if (SDU1.config->usbp->state == USB_ACTIVE)
-        // {
-        //     thread_t *shelltp =
-        //         chThdCreateFromHeap(NULL, SHELL_WA_SIZE, "shell", NORMALPRIO + 1, shellThread, (void *)&shell_cfg);
-        //     chThdWait(shelltp); /* Waiting termination.             */
-        // }
+        if (SDU1.config->usbp->state == USB_ACTIVE)
+        {
+            thread_t *shelltp =
+                chThdCreateFromHeap(NULL, SHELL_WA_SIZE, "shell", NORMALPRIO + 1, shellThread, (void *)&shell_cfg);
+            chThdWait(shelltp); /* Waiting termination.             */
+        }
         chThdSleepMilliseconds(500);
     }
 }
