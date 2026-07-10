@@ -17,6 +17,15 @@
 /**
  * @file    STM32U5xx/hal_lld.h
  * @brief   STM32U5xx HAL subsystem low level driver header.
+ * @pre     This module requires the following macros to be defined in the
+ *          @p board.h file:
+ *          - STM32_LSECLK.
+ *          - STM32_LSEDRV.
+ *          - STM32_LSE_BYPASS (optionally).
+ *          - STM32_HSECLK.
+ *          - STM32_HSE_BYPASS (optionally).
+ *          - STM32_HSE_DIGITAL (optionally).
+ *          .
  *
  * @addtogroup HAL
  * @{
@@ -76,42 +85,6 @@
 #endif
 /** @} */
 
-/**
- * @name   Clock points names
- * @{
- */
-#define CLK_HSI16                           0U
-#define CLK_HSI48                           1U
-#define CLK_HSE                             2U
-#define CLK_MSIS                            3U
-#define CLK_MSIK                            4U
-#define CLK_SYSCLK                          5U
-#define CLK_PLL1PCLK                        6U
-#define CLK_PLL1QCLK                        7U
-#define CLK_PLL1RCLK                        8U
-#define CLK_PLL2PCLK                        9U
-#define CLK_PLL2QCLK                        10U
-#define CLK_PLL2RCLK                        11U
-#define CLK_PLL3PCLK                        12U
-#define CLK_PLL3QCLK                        13U
-#define CLK_PLL3RCLK                        14U
-#define CLK_HCLK                            15U
-#define CLK_PCLK1                           16U
-#define CLK_PCLK1TIM                        17U
-#define CLK_PCLK2                           18U
-#define CLK_PCLK2TIM                        19U
-#define CLK_PCLK3                           20U
-#define CLK_MCO                             21U
-#define CLK_ARRAY_SIZE                      22U
-
-#define CLK_POINT_NAMES                                                     \
-  {                                                                         \
-    "HSI16", "HSI48", "HSE", "MSIS", "MSIK", "SYSCLK", "PLL1P", "PLL1Q",    \
-    "PLL1R", "PLL2P", "PLL2Q", "PLL2R", "PLL3P", "PLL3Q", "PLL3R",          \
-    "HCLK", "PCLK1", "PCLK1TIM", "PCLK2", "PCLK2TIM", "PCLK3", "MCO"        \
-  }
-/** @} */
-
 /*===========================================================================*/
 /* RCC/PWR/FLASH configuration aliases.                                      */
 /*===========================================================================*/
@@ -135,182 +108,32 @@
 /** @} */
 
 /**
- * @name    RCC_ICSCR1 register helpers
+ * @name    Board-defined oscillator mode helpers
  * @{
  */
-#define RCC_ICSCR1_MSIBIAS_FIELD(n)         ((n) << RCC_ICSCR1_MSIBIAS_Pos)
-#define RCC_ICSCR1_MSIBIAS_CONTINUOUS       RCC_ICSCR1_MSIBIAS_FIELD(0U)
-#define RCC_ICSCR1_MSIBIAS_SAMPLING         RCC_ICSCR1_MSIBIAS_FIELD(1U)
-
-#define RCC_ICSCR1_MSIRGSEL_FIELD(n)        ((n) << RCC_ICSCR1_MSIRGSEL_Pos)
-#define RCC_ICSCR1_MSIRGSEL_CSR             RCC_ICSCR1_MSIRGSEL_FIELD(0U)
-#define RCC_ICSCR1_MSIRGSEL_ICSCR1          RCC_ICSCR1_MSIRGSEL_FIELD(1U)
-
-#define RCC_ICSCR1_MSIKRANGE_FIELD(n)       ((n) << RCC_ICSCR1_MSIKRANGE_Pos)
-#define RCC_ICSCR1_MSISRANGE_FIELD(n)       ((n) << RCC_ICSCR1_MSISRANGE_Pos)
-/** @} */
-
-/**
- * @name    RCC_CFGR1 register helpers
- * @{
- */
-#define RCC_CFGR1_SW_FIELD(n)               ((n) << RCC_CFGR1_SW_Pos)
-#define RCC_CFGR1_SW_MSIS                   RCC_CFGR1_SW_FIELD(0U)
-#define RCC_CFGR1_SW_HSI16                  RCC_CFGR1_SW_FIELD(1U)
-#define RCC_CFGR1_SW_HSE                    RCC_CFGR1_SW_FIELD(2U)
-#define RCC_CFGR1_SW_PLL1P                  RCC_CFGR1_SW_FIELD(3U)
-
-#define RCC_CFGR1_SWS_FIELD(n)              ((n) << RCC_CFGR1_SWS_Pos)
-#define RCC_CFGR1_SWS_MSIS                  RCC_CFGR1_SWS_FIELD(0U)
-#define RCC_CFGR1_SWS_HSI16                 RCC_CFGR1_SWS_FIELD(1U)
-#define RCC_CFGR1_SWS_HSE                   RCC_CFGR1_SWS_FIELD(2U)
-#define RCC_CFGR1_SWS_PLL1P                 RCC_CFGR1_SWS_FIELD(3U)
-
-#define RCC_CFGR1_STOPWUCK_FIELD(n)         ((n) << RCC_CFGR1_STOPWUCK_Pos)
-#define RCC_CFGR1_STOPWUCK_MSIS             RCC_CFGR1_STOPWUCK_FIELD(0U)
-#define RCC_CFGR1_STOPWUCK_HSI16            RCC_CFGR1_STOPWUCK_FIELD(1U)
-
-#define RCC_CFGR1_STOPKERWUCK_FIELD(n)      ((n) << RCC_CFGR1_STOPKERWUCK_Pos)
-#define RCC_CFGR1_STOPKERWUCK_MSIK          RCC_CFGR1_STOPKERWUCK_FIELD(0U)
-#define RCC_CFGR1_STOPKERWUCK_HSI16         RCC_CFGR1_STOPKERWUCK_FIELD(1U)
-
-#define RCC_CFGR1_MCOSEL_FIELD(n)           ((n) << RCC_CFGR1_MCOSEL_Pos)
-#define RCC_CFGR1_MCOPRE_FIELD(n)           ((n) << RCC_CFGR1_MCOPRE_Pos)
-#define RCC_CFGR1_MCOPRE_DIV1               RCC_CFGR1_MCOPRE_FIELD(0U)
-#define RCC_CFGR1_MCOPRE_DIV2               RCC_CFGR1_MCOPRE_FIELD(1U)
-#define RCC_CFGR1_MCOPRE_DIV4               RCC_CFGR1_MCOPRE_FIELD(2U)
-#define RCC_CFGR1_MCOPRE_DIV8               RCC_CFGR1_MCOPRE_FIELD(3U)
-#define RCC_CFGR1_MCOPRE_DIV16              RCC_CFGR1_MCOPRE_FIELD(4U)
-#define RCC_CFGR1_MCOPRE_DIV32              RCC_CFGR1_MCOPRE_FIELD(5U)
-#define RCC_CFGR1_MCOPRE_DIV64              RCC_CFGR1_MCOPRE_FIELD(6U)
-#define RCC_CFGR1_MCOPRE_DIV128             RCC_CFGR1_MCOPRE_FIELD(7U)
-/** @} */
-
-/**
- * @name    RCC_CFGR2 register helpers
- * @{
- */
-#if !defined(RCC_CFGR2_HPRE_FIELD)
-#define RCC_CFGR2_HPRE_FIELD(n)             ((n) << RCC_CFGR2_HPRE_Pos)
-#endif
-#if !defined(RCC_CFGR2_HPRE_DIV1)
-#define RCC_CFGR2_HPRE_DIV1                 RCC_CFGR2_HPRE_FIELD(0U)
-#define RCC_CFGR2_HPRE_DIV2                 RCC_CFGR2_HPRE_FIELD(8U)
-#define RCC_CFGR2_HPRE_DIV4                 RCC_CFGR2_HPRE_FIELD(9U)
-#define RCC_CFGR2_HPRE_DIV8                 RCC_CFGR2_HPRE_FIELD(10U)
-#define RCC_CFGR2_HPRE_DIV16                RCC_CFGR2_HPRE_FIELD(11U)
-#define RCC_CFGR2_HPRE_DIV64                RCC_CFGR2_HPRE_FIELD(12U)
-#define RCC_CFGR2_HPRE_DIV128               RCC_CFGR2_HPRE_FIELD(13U)
-#define RCC_CFGR2_HPRE_DIV256               RCC_CFGR2_HPRE_FIELD(14U)
-#define RCC_CFGR2_HPRE_DIV512               RCC_CFGR2_HPRE_FIELD(15U)
+#if defined(STM32_HSE_BYPASS) || defined(__DOXYGEN__)
+  #if defined(STM32_HSE_DIGITAL) || defined(__DOXYGEN__)
+    #define STM32_HSE_MODE_BITS             (RCC_CR_HSEBYP | RCC_CR_HSEEXT)
+  #else
+    #define STM32_HSE_MODE_BITS             RCC_CR_HSEBYP
+  #endif
+#else
+  #define STM32_HSE_MODE_BITS               0U
 #endif
 
-#if !defined(RCC_CFGR2_PPRE1_FIELD)
-#define RCC_CFGR2_PPRE1_FIELD(n)            ((n) << RCC_CFGR2_PPRE1_Pos)
-#endif
-#if !defined(RCC_CFGR2_PPRE1_DIV1)
-#define RCC_CFGR2_PPRE1_DIV1                RCC_CFGR2_PPRE1_FIELD(0U)
-#define RCC_CFGR2_PPRE1_DIV2                RCC_CFGR2_PPRE1_FIELD(4U)
-#define RCC_CFGR2_PPRE1_DIV4                RCC_CFGR2_PPRE1_FIELD(5U)
-#define RCC_CFGR2_PPRE1_DIV8                RCC_CFGR2_PPRE1_FIELD(6U)
-#define RCC_CFGR2_PPRE1_DIV16               RCC_CFGR2_PPRE1_FIELD(7U)
+#if !defined(STM32_LSEDRV)
+  #error "STM32_LSEDRV not defined in board.h"
 #endif
 
-#if !defined(RCC_CFGR2_PPRE2_FIELD)
-#define RCC_CFGR2_PPRE2_FIELD(n)            ((n) << RCC_CFGR2_PPRE2_Pos)
+#if (STM32_LSEDRV & ~RCC_BDCR_LSEDRV_Msk) != 0U
+  #error "STM32_LSEDRV outside acceptable range ((0<<3)...(3<<3))"
 #endif
-#if !defined(RCC_CFGR2_PPRE2_DIV1)
-#define RCC_CFGR2_PPRE2_DIV1                RCC_CFGR2_PPRE2_FIELD(0U)
-#define RCC_CFGR2_PPRE2_DIV2                RCC_CFGR2_PPRE2_FIELD(4U)
-#define RCC_CFGR2_PPRE2_DIV4                RCC_CFGR2_PPRE2_FIELD(5U)
-#define RCC_CFGR2_PPRE2_DIV8                RCC_CFGR2_PPRE2_FIELD(6U)
-#define RCC_CFGR2_PPRE2_DIV16               RCC_CFGR2_PPRE2_FIELD(7U)
+
+#if defined(STM32_LSE_BYPASS) || defined(__DOXYGEN__)
+  #define STM32_LSE_MODE_BITS               (STM32_LSEDRV | RCC_BDCR_LSEBYP)
+#else
+  #define STM32_LSE_MODE_BITS               STM32_LSEDRV
 #endif
-/** @} */
-
-/**
- * @name    RCC_CFGR3 register helpers
- * @{
- */
-#if !defined(RCC_CFGR3_PPRE3_FIELD)
-#define RCC_CFGR3_PPRE3_FIELD(n)            ((n) << RCC_CFGR3_PPRE3_Pos)
-#endif
-#if !defined(RCC_CFGR3_PPRE3_DIV1)
-#define RCC_CFGR3_PPRE3_DIV1                RCC_CFGR3_PPRE3_FIELD(0U)
-#define RCC_CFGR3_PPRE3_DIV2                RCC_CFGR3_PPRE3_FIELD(4U)
-#define RCC_CFGR3_PPRE3_DIV4                RCC_CFGR3_PPRE3_FIELD(5U)
-#define RCC_CFGR3_PPRE3_DIV8                RCC_CFGR3_PPRE3_FIELD(6U)
-#define RCC_CFGR3_PPRE3_DIV16               RCC_CFGR3_PPRE3_FIELD(7U)
-#endif
-/** @} */
-
-/**
- * @name    RCC_PLL1CFGR register helpers
- * @{
- */
-#define RCC_PLL1CFGR_PLL1SRC_FIELD(n)       ((n) << RCC_PLL1CFGR_PLL1SRC_Pos)
-#define RCC_PLL1CFGR_PLL1SRC_NOCLOCK        RCC_PLL1CFGR_PLL1SRC_FIELD(0U)
-#define RCC_PLL1CFGR_PLL1SRC_MSIS           RCC_PLL1CFGR_PLL1SRC_FIELD(1U)
-#define RCC_PLL1CFGR_PLL1SRC_HSI16          RCC_PLL1CFGR_PLL1SRC_FIELD(2U)
-#define RCC_PLL1CFGR_PLL1SRC_HSE            RCC_PLL1CFGR_PLL1SRC_FIELD(3U)
-
-#define RCC_PLL1CFGR_PLL1RGE_FIELD(n)       ((n) << RCC_PLL1CFGR_PLL1RGE_Pos)
-#define RCC_PLL1CFGR_PLL1RGE_1TO2           RCC_PLL1CFGR_PLL1RGE_FIELD(0U)
-#define RCC_PLL1CFGR_PLL1RGE_2TO4           RCC_PLL1CFGR_PLL1RGE_FIELD(1U)
-#define RCC_PLL1CFGR_PLL1RGE_4TO8           RCC_PLL1CFGR_PLL1RGE_FIELD(2U)
-#define RCC_PLL1CFGR_PLL1RGE_8TO16          RCC_PLL1CFGR_PLL1RGE_FIELD(3U)
-/** @} */
-
-/**
- * @name    RCC_PLL2CFGR register helpers
- * @{
- */
-#define RCC_PLL2CFGR_PLL2SRC_FIELD(n)       ((n) << RCC_PLL2CFGR_PLL2SRC_Pos)
-#define RCC_PLL2CFGR_PLL2SRC_NOCLOCK        RCC_PLL2CFGR_PLL2SRC_FIELD(0U)
-#define RCC_PLL2CFGR_PLL2SRC_MSIS           RCC_PLL2CFGR_PLL2SRC_FIELD(1U)
-#define RCC_PLL2CFGR_PLL2SRC_HSI16          RCC_PLL2CFGR_PLL2SRC_FIELD(2U)
-#define RCC_PLL2CFGR_PLL2SRC_HSE            RCC_PLL2CFGR_PLL2SRC_FIELD(3U)
-
-#define RCC_PLL2CFGR_PLL2RGE_FIELD(n)       ((n) << RCC_PLL2CFGR_PLL2RGE_Pos)
-#define RCC_PLL2CFGR_PLL2RGE_1TO2           RCC_PLL2CFGR_PLL2RGE_FIELD(0U)
-#define RCC_PLL2CFGR_PLL2RGE_2TO4           RCC_PLL2CFGR_PLL2RGE_FIELD(1U)
-#define RCC_PLL2CFGR_PLL2RGE_4TO8           RCC_PLL2CFGR_PLL2RGE_FIELD(2U)
-#define RCC_PLL2CFGR_PLL2RGE_8TO16          RCC_PLL2CFGR_PLL2RGE_FIELD(3U)
-/** @} */
-
-/**
- * @name    RCC_PLL3CFGR register helpers
- * @{
- */
-#define RCC_PLL3CFGR_PLL3SRC_FIELD(n)       ((n) << RCC_PLL3CFGR_PLL3SRC_Pos)
-#define RCC_PLL3CFGR_PLL3SRC_NOCLOCK        RCC_PLL3CFGR_PLL3SRC_FIELD(0U)
-#define RCC_PLL3CFGR_PLL3SRC_MSIS           RCC_PLL3CFGR_PLL3SRC_FIELD(1U)
-#define RCC_PLL3CFGR_PLL3SRC_HSI16          RCC_PLL3CFGR_PLL3SRC_FIELD(2U)
-#define RCC_PLL3CFGR_PLL3SRC_HSE            RCC_PLL3CFGR_PLL3SRC_FIELD(3U)
-
-#define RCC_PLL3CFGR_PLL3RGE_FIELD(n)       ((n) << RCC_PLL3CFGR_PLL3RGE_Pos)
-#define RCC_PLL3CFGR_PLL3RGE_1TO2           RCC_PLL3CFGR_PLL3RGE_FIELD(0U)
-#define RCC_PLL3CFGR_PLL3RGE_2TO4           RCC_PLL3CFGR_PLL3RGE_FIELD(1U)
-#define RCC_PLL3CFGR_PLL3RGE_4TO8           RCC_PLL3CFGR_PLL3RGE_FIELD(2U)
-#define RCC_PLL3CFGR_PLL3RGE_8TO16          RCC_PLL3CFGR_PLL3RGE_FIELD(3U)
-/** @} */
-
-/**
- * @name    RCC_BDCR register helpers
- * @{
- */
-#define RCC_BDCR_RTCSEL_FIELD(n)            ((n) << RCC_BDCR_RTCSEL_Pos)
-#define RCC_BDCR_RTCSEL_NOCLOCK             RCC_BDCR_RTCSEL_FIELD(0U)
-#define RCC_BDCR_RTCSEL_LSE                 RCC_BDCR_RTCSEL_FIELD(1U)
-#define RCC_BDCR_RTCSEL_LSI                 RCC_BDCR_RTCSEL_FIELD(2U)
-#define RCC_BDCR_RTCSEL_HSEDIV              RCC_BDCR_RTCSEL_FIELD(3U)
-
-#define RCC_BDCR_LSCOSEL_FIELD(n)           ((n) << RCC_BDCR_LSCOSEL_Pos)
-#define RCC_BDCR_LSCOSEL_NOCLOCK            0U
-#define RCC_BDCR_LSCOSEL_LSI                (RCC_BDCR_LSCOEN |      \
-                                             RCC_BDCR_LSCOSEL_FIELD(0U))
-#define RCC_BDCR_LSCOSEL_LSE                (RCC_BDCR_LSCOEN |      \
-                                             RCC_BDCR_LSCOSEL_FIELD(1U))
 /** @} */
 
 /*===========================================================================*/
@@ -321,160 +144,264 @@
 #define STM32_NO_INIT                       FALSE
 #endif
 
-#if !defined(STM32_PWR_VOSR) || defined(__DOXYGEN__)
-#define STM32_PWR_VOSR                      PWR_VOSR_VOS_RANGE1
+#if !defined(STM32_FLASH_ACR) || defined(__DOXYGEN__)
+#define STM32_FLASH_ACR                     (FLASH_ACR_PRFTEN)
 #endif
 
-#if !defined(STM32_HSI16_ENABLED) || defined(__DOXYGEN__)
-#define STM32_HSI16_ENABLED                 FALSE
-#endif
+#include "clocktree.h"
 
-#if !defined(STM32_HSI48_ENABLED) || defined(__DOXYGEN__)
-#define STM32_HSI48_ENABLED                 FALSE
-#endif
-
-#if !defined(STM32_HSE_ENABLED) || defined(__DOXYGEN__)
-#define STM32_HSE_ENABLED                   FALSE
-#endif
-
-#if !defined(STM32_LSE_ENABLED) || defined(__DOXYGEN__)
-#define STM32_LSE_ENABLED                   FALSE
-#endif
-
-#if !defined(STM32_LSI_ENABLED) || defined(__DOXYGEN__)
-#define STM32_LSI_ENABLED                   FALSE
-#endif
-
-#if !defined(RCC_CCIPR1_USART1SEL_FIELD)
-#define RCC_CCIPR1_USART1SEL_FIELD(n)       ((n) << RCC_CCIPR1_USART1SEL_Pos)
-#define RCC_CCIPR1_USART1SEL_PCLK2          RCC_CCIPR1_USART1SEL_FIELD(0U)
-#define RCC_CCIPR1_USART1SEL_HSI16          RCC_CCIPR1_USART1SEL_FIELD(1U)
-#endif
-
-#if !defined(RCC_CCIPR1_USART3SEL_FIELD)
-#define RCC_CCIPR1_USART3SEL_FIELD(n)       ((n) << RCC_CCIPR1_USART3SEL_Pos)
-#define RCC_CCIPR1_USART3SEL_PCLK1          RCC_CCIPR1_USART3SEL_FIELD(0U)
-#define RCC_CCIPR1_USART3SEL_HSI16          RCC_CCIPR1_USART3SEL_FIELD(1U)
-#endif
-
-#if !defined(RCC_CCIPR1_UART4SEL_FIELD)
-#define RCC_CCIPR1_UART4SEL_FIELD(n)        ((n) << RCC_CCIPR1_UART4SEL_Pos)
-#define RCC_CCIPR1_UART4SEL_PCLK1           RCC_CCIPR1_UART4SEL_FIELD(0U)
-#define RCC_CCIPR1_UART4SEL_HSI16           RCC_CCIPR1_UART4SEL_FIELD(1U)
-#endif
-
-#if !defined(RCC_CCIPR1_UART5SEL_FIELD)
-#define RCC_CCIPR1_UART5SEL_FIELD(n)        ((n) << RCC_CCIPR1_UART5SEL_Pos)
-#define RCC_CCIPR1_UART5SEL_PCLK1           RCC_CCIPR1_UART5SEL_FIELD(0U)
-#define RCC_CCIPR1_UART5SEL_HSI16           RCC_CCIPR1_UART5SEL_FIELD(1U)
-#endif
-
-#if !defined(RCC_CCIPR3_LPUART1SEL_FIELD)
-#define RCC_CCIPR3_LPUART1SEL_FIELD(n)      ((n) << RCC_CCIPR3_LPUART1SEL_Pos)
-#define RCC_CCIPR3_LPUART1SEL_PCLK3         RCC_CCIPR3_LPUART1SEL_FIELD(0U)
-#define RCC_CCIPR3_LPUART1SEL_HSI16         RCC_CCIPR3_LPUART1SEL_FIELD(1U)
-#define RCC_CCIPR3_LPUART1SEL_LSE           RCC_CCIPR3_LPUART1SEL_FIELD(2U)
-#define RCC_CCIPR3_LPUART1SEL_MSIK          RCC_CCIPR3_LPUART1SEL_FIELD(3U)
-#endif
-
-#if !defined(STM32_USART1SEL) || defined(__DOXYGEN__)
-#define STM32_USART1SEL                     RCC_CCIPR1_USART1SEL_PCLK2
-#endif
-
-#if !defined(STM32_USART3SEL) || defined(__DOXYGEN__)
-#define STM32_USART3SEL                     RCC_CCIPR1_USART3SEL_PCLK1
-#endif
-
-#if !defined(STM32_UART4SEL) || defined(__DOXYGEN__)
-#define STM32_UART4SEL                      RCC_CCIPR1_UART4SEL_PCLK1
-#endif
-
-#if !defined(STM32_UART5SEL) || defined(__DOXYGEN__)
-#define STM32_UART5SEL                      RCC_CCIPR1_UART5SEL_PCLK1
-#endif
-
-#if !defined(STM32_LPUART1SEL) || defined(__DOXYGEN__)
-#define STM32_LPUART1SEL                    RCC_CCIPR3_LPUART1SEL_PCLK3
-#endif
-
-/*===========================================================================*/
-/* Derived constants and error checks.                                       */
-/*===========================================================================*/
-
-/*
- * First clock model for the initial U5 demo enablement. The target currently
- * stays on the reset MSIS configuration, assumed here as 4 MHz.
+/**
+ * @name    Static register initialization settings
+ * @{
  */
-#define STM32_HSI16CLK                      16000000U
-#define STM32_HSI48CLK                      48000000U
-#define STM32_MSISCLK                       4000000U
-#define STM32_MSIKCLK                       STM32_MSISCLK
-#define STM32_SYSCLK                        STM32_MSISCLK
-#define STM32_HCLK                          STM32_SYSCLK
-#define STM32_PCLK1                         STM32_HCLK
-#define STM32_PCLK1TIM                      STM32_PCLK1
-#define STM32_PCLK2                         STM32_HCLK
-#define STM32_PCLK2TIM                      STM32_PCLK2
-#define STM32_PCLK3                         STM32_HCLK
-
-#define hal_lld_get_clock_point(clkpt)                                      \
-  ((clkpt) == CLK_HSI16    ? STM32_HSI16CLK :                               \
-   (clkpt) == CLK_HSI48    ? STM32_HSI48CLK :                               \
-   (clkpt) == CLK_HSE      ? STM32_HSECLK   :                               \
-   (clkpt) == CLK_MSIS     ? STM32_MSISCLK  :                               \
-   (clkpt) == CLK_MSIK     ? STM32_MSIKCLK  :                               \
-   (clkpt) == CLK_SYSCLK   ? STM32_SYSCLK   :                               \
-   (clkpt) == CLK_HCLK     ? STM32_HCLK     :                               \
-   (clkpt) == CLK_PCLK1    ? STM32_PCLK1    :                               \
-   (clkpt) == CLK_PCLK1TIM ? STM32_PCLK1TIM :                               \
-   (clkpt) == CLK_PCLK2    ? STM32_PCLK2    :                               \
-   (clkpt) == CLK_PCLK2TIM ? STM32_PCLK2TIM :                               \
-   (clkpt) == CLK_PCLK3    ? STM32_PCLK3    :                               \
-   0U)
-
-#if (STM32_USART1SEL == RCC_CCIPR1_USART1SEL_PCLK2) || defined(__DOXYGEN__)
-#define STM32_USART1CLK                     hal_lld_get_clock_point(CLK_PCLK2)
-#elif STM32_USART1SEL == RCC_CCIPR1_USART1SEL_HSI16
-#define STM32_USART1CLK                     hal_lld_get_clock_point(CLK_HSI16)
-#else
-#error "unsupported STM32_USART1SEL value"
+#if !defined(STM32_PWR_CR1) || defined(__DOXYGEN__)
+#define STM32_PWR_CR1                       (0U)
 #endif
 
-#if (STM32_USART3SEL == RCC_CCIPR1_USART3SEL_PCLK1) || defined(__DOXYGEN__)
-#define STM32_USART3CLK                     hal_lld_get_clock_point(CLK_PCLK1)
-#elif STM32_USART3SEL == RCC_CCIPR1_USART3SEL_HSI16
-#define STM32_USART3CLK                     hal_lld_get_clock_point(CLK_HSI16)
-#else
-#error "unsupported STM32_USART3SEL value"
+#if !defined(STM32_PWR_CR2) || defined(__DOXYGEN__)
+#define STM32_PWR_CR2                       (0U)
 #endif
 
-#if (STM32_UART4SEL == RCC_CCIPR1_UART4SEL_PCLK1) || defined(__DOXYGEN__)
-#define STM32_UART4CLK                      hal_lld_get_clock_point(CLK_PCLK1)
-#elif STM32_UART4SEL == RCC_CCIPR1_UART4SEL_HSI16
-#define STM32_UART4CLK                      hal_lld_get_clock_point(CLK_HSI16)
-#else
-#error "unsupported STM32_UART4SEL value"
+#if !defined(STM32_PWR_CR3) || defined(__DOXYGEN__)
+#define STM32_PWR_CR3                       (0U)
 #endif
 
-#if (STM32_UART5SEL == RCC_CCIPR1_UART5SEL_PCLK1) || defined(__DOXYGEN__)
-#define STM32_UART5CLK                      hal_lld_get_clock_point(CLK_PCLK1)
-#elif STM32_UART5SEL == RCC_CCIPR1_UART5SEL_HSI16
-#define STM32_UART5CLK                      hal_lld_get_clock_point(CLK_HSI16)
-#else
-#error "unsupported STM32_UART5SEL value"
+#if !defined(STM32_PWR_SVMCR) || defined(__DOXYGEN__)
+#define STM32_PWR_SVMCR                     (0U)
 #endif
 
-#if (STM32_LPUART1SEL == RCC_CCIPR3_LPUART1SEL_PCLK3) || defined(__DOXYGEN__)
-#define STM32_LPUART1CLK                    hal_lld_get_clock_point(CLK_PCLK3)
-#elif STM32_LPUART1SEL == RCC_CCIPR3_LPUART1SEL_HSI16
-#define STM32_LPUART1CLK                    hal_lld_get_clock_point(CLK_HSI16)
-#elif STM32_LPUART1SEL == RCC_CCIPR3_LPUART1SEL_LSE
-#define STM32_LPUART1CLK                    STM32_LSECLK
-#elif STM32_LPUART1SEL == RCC_CCIPR3_LPUART1SEL_MSIK
-#define STM32_LPUART1CLK                    hal_lld_get_clock_point(CLK_MSIK)
-#else
-#error "unsupported STM32_LPUART1SEL value"
+#if !defined(STM32_PWR_WUCR1) || defined(__DOXYGEN__)
+#define STM32_PWR_WUCR1                     (0U)
 #endif
+
+#if !defined(STM32_PWR_WUCR2) || defined(__DOXYGEN__)
+#define STM32_PWR_WUCR2                     (0U)
+#endif
+
+#if !defined(STM32_PWR_WUCR3) || defined(__DOXYGEN__)
+#define STM32_PWR_WUCR3                     (0U)
+#endif
+
+#if !defined(STM32_PWR_BDCR1) || defined(__DOXYGEN__)
+#define STM32_PWR_BDCR1                     (0U)
+#endif
+
+#if !defined(STM32_PWR_BDCR2) || defined(__DOXYGEN__)
+#define STM32_PWR_BDCR2                     (0U)
+#endif
+
+#if !defined(STM32_PWR_UCPDR) || defined(__DOXYGEN__)
+#define STM32_PWR_UCPDR                     (0U)
+#endif
+
+#if !defined(STM32_PWR_SECCFGR) || defined(__DOXYGEN__)
+#define STM32_PWR_SECCFGR                   (0U)
+#endif
+
+#if !defined(STM32_PWR_PRIVCFGR) || defined(__DOXYGEN__)
+#define STM32_PWR_PRIVCFGR                  (0U)
+#endif
+
+#if !defined(STM32_PWR_APCR) || defined(__DOXYGEN__)
+#define STM32_PWR_APCR                      (0U)
+#endif
+
+#if !defined(STM32_PWR_PUCRA) || defined(__DOXYGEN__)
+#define STM32_PWR_PUCRA                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PDCRA) || defined(__DOXYGEN__)
+#define STM32_PWR_PDCRA                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PUCRB) || defined(__DOXYGEN__)
+#define STM32_PWR_PUCRB                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PDCRB) || defined(__DOXYGEN__)
+#define STM32_PWR_PDCRB                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PUCRC) || defined(__DOXYGEN__)
+#define STM32_PWR_PUCRC                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PDCRC) || defined(__DOXYGEN__)
+#define STM32_PWR_PDCRC                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PUCRD) || defined(__DOXYGEN__)
+#define STM32_PWR_PUCRD                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PDCRD) || defined(__DOXYGEN__)
+#define STM32_PWR_PDCRD                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PUCRE) || defined(__DOXYGEN__)
+#define STM32_PWR_PUCRE                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PDCRE) || defined(__DOXYGEN__)
+#define STM32_PWR_PDCRE                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PUCRF) || defined(__DOXYGEN__)
+#define STM32_PWR_PUCRF                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PDCRF) || defined(__DOXYGEN__)
+#define STM32_PWR_PDCRF                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PUCRG) || defined(__DOXYGEN__)
+#define STM32_PWR_PUCRG                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PDCRG) || defined(__DOXYGEN__)
+#define STM32_PWR_PDCRG                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PUCRH) || defined(__DOXYGEN__)
+#define STM32_PWR_PUCRH                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PDCRH) || defined(__DOXYGEN__)
+#define STM32_PWR_PDCRH                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PUCRI) || defined(__DOXYGEN__)
+#define STM32_PWR_PUCRI                     (0U)
+#endif
+
+#if !defined(STM32_PWR_PDCRI) || defined(__DOXYGEN__)
+#define STM32_PWR_PDCRI                     (0U)
+#endif
+
+/** @} */
+
+/**
+ * @name    Activation times in microseconds
+ * @{
+ */
+#define STM32_RELAXED_TIMEOUT_FACTOR        5U
+#define STM32_REGULATORS_TRANSITION_TIME    (21U * STM32_RELAXED_TIMEOUT_FACTOR)
+#define STM32_OSCILLATORS_STARTUP_TIME      (2000U * STM32_RELAXED_TIMEOUT_FACTOR)
+#define STM32_PLL_STARTUP_TIME              (800U * STM32_RELAXED_TIMEOUT_FACTOR)
+#define STM32_SYSCLK_SWITCH_TIME            (50U * STM32_RELAXED_TIMEOUT_FACTOR)
+/** @} */
+
+/**
+ * @brief   Flash wait-state settings.
+ */
+#if (STM32_HCLK_FREQ <= STM32_FLASH_0WS_MAX) || defined(__DOXYGEN__)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_0WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_1WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_1WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_2WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_2WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_3WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_3WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_4WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_4WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_5WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_5WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_6WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_6WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_7WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_7WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_8WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_8WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_9WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_9WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_10WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_10WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_11WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_11WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_12WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_12WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_13WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_13WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_14WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_14WS
+#elif (STM32_HCLK_FREQ <= STM32_FLASH_15WS_MAX)
+#define STM32_FLASHBITS                     FLASH_ACR_LATENCY_15WS
+#else
+#error "invalid STM32_HCLK frequency specified"
+#endif
+
+#if STM32_CFG_CLOCK_DYNAMIC == TRUE
+#define HAL_LLD_USE_CLOCK_MANAGEMENT
+#endif
+
+/*===========================================================================*/
+/* Compatibility clock aliases.                                              */
+/*===========================================================================*/
+
+#define STM32_HSI16CLK                      STM32_HSI16_CLOCK
+#define STM32_HSI48CLK                      STM32_HSI48_CLOCK
+#define STM32_MSISCLK                       STM32_MSIS_CLOCK
+#define STM32_MSIKCLK                       STM32_MSIK_CLOCK
+#define STM32_LSICLK                        STM32_LSI_CLOCK
+
+#define STM32_SYSCLK                        STM32_SYSCLK_CLOCK
+#define STM32_HCLK                          STM32_HCLK_CLOCK
+#define STM32_PCLK1                         STM32_PCLK1_CLOCK
+#define STM32_PCLK1TIM                      STM32_PCLK1TIM_CLOCK
+#define STM32_PCLK2                         STM32_PCLK2_CLOCK
+#define STM32_PCLK2TIM                      STM32_PCLK2TIM_CLOCK
+#define STM32_PCLK3                         STM32_PCLK3_CLOCK
+#define STM32_RTCCLK                        STM32_RTC_CLOCK
+
+#define STM32_USART1CLK                     STM32_USART1_CLOCK
+#define STM32_USART2CLK                     STM32_USART2_CLOCK
+#define STM32_USART3CLK                     STM32_USART3_CLOCK
+#define STM32_UART4CLK                      STM32_UART4_CLOCK
+#define STM32_UART5CLK                      STM32_UART5_CLOCK
+#define STM32_LPUART1CLK                    STM32_LPUART1_CLOCK
+
+#define STM32_TIM16CCLK                     STM32_TIM16IC_CLOCK
+#define STM32_TIM17CCLK                     STM32_TIM17IC_CLOCK
+#define STM32_LPTIM2CCLK                    STM32_LPTIM2IC_CLOCK
+#define STM32_LPTIM1CLK                     STM32_LPTIM1_CLOCK
+#define STM32_LPTIM2CLK                     STM32_LPTIM2_CLOCK
+#define STM32_LPTIM3CLK                     STM32_LPTIM34_CLOCK
+#define STM32_LPTIM4CLK                     STM32_LPTIM34_CLOCK
+#define STM32_SPI1CLK                       STM32_SPI1_CLOCK
+#define STM32_SPI2CLK                       STM32_SPI2_CLOCK
+#define STM32_SPI3CLK                       STM32_SPI3_CLOCK
+#define STM32_OSPICLK                       STM32_OCTOSPI_CLOCK
+#define STM32_SYSTICKCLK                    STM32_SYSTICK_CLOCK
+#define STM32_ICLK                          STM32_ICLK_CLOCK
+#define STM32_USBCLK                        STM32_USB_CLOCK
+#define STM32_SDMMC1CLK                     STM32_SDMMC1_CLOCK
+#define STM32_SDMMC2CLK                     STM32_SDMMC2_CLOCK
+#define STM32_I2C1CLK                       STM32_I2C1_CLOCK
+#define STM32_I2C2CLK                       STM32_I2C2_CLOCK
+#define STM32_I2C3CLK                       STM32_I2C3_CLOCK
+#define STM32_I2C4CLK                       STM32_I2C4_CLOCK
+#define STM32_ADCDACCLK                     STM32_ADCDAC_CLOCK
+#define STM32_DAC1SHSELCLK                  STM32_DAC1SH_CLOCK
+#define STM32_RNGCLK                        STM32_RNG_CLOCK
+#define STM32_FDCAN1CLK                     STM32_FDCAN1_CLOCK
+#define STM32_SAI1CLK                       STM32_SAI1_CLOCK
+#define STM32_SAI2CLK                       STM32_SAI2_CLOCK
+#define STM32_MDF1CLK                       STM32_MDF1_CLOCK
+#define STM32_ADF1CLK                       STM32_ADF1_CLOCK
+
+#define STM32_TIMP1CLK                      STM32_PCLK1TIM_CLOCK
+#define STM32_TIMP2CLK                      STM32_PCLK2TIM_CLOCK
+#define STM32_TIMCLK1                       STM32_PCLK1TIM_CLOCK
+#define STM32_TIMCLK2                       STM32_PCLK2TIM_CLOCK
+#define STM32_ADC1_CLOCK                    STM32_ADCDAC_CLOCK
+#define STM32_ADC2_CLOCK                    STM32_ADCDAC_CLOCK
+#define STM32_ADC4_CLOCK                    STM32_ADCDAC_CLOCK
+#define STM32_DAC1_CLOCK                    STM32_ADCDAC_CLOCK
+
+/**
+ * @brief   Maximum allowed SDMMC kernel clock frequency.
+ */
+#define STM32_SDMMC_MAXCLK                  208000000U
 
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
@@ -484,6 +411,33 @@
  * @brief   Type of a timeout counter.
  */
 typedef uint32_t halcnt_t;
+
+/**
+ * @brief   Type of a PLL configuration structure.
+ */
+typedef struct {
+  uint32_t          cfgr;
+  uint32_t          divr;
+  uint32_t          fracr;
+} stm32_pllcfg_t;
+
+/**
+ * @brief   Type of a clock configuration structure.
+ */
+typedef struct {
+  uint32_t          pwr_vosr;
+  uint32_t          rcc_cr;
+  uint32_t          rcc_icscr1;
+  uint32_t          rcc_cfgr1;
+  uint32_t          rcc_cfgr2;
+  uint32_t          rcc_cfgr3;
+  uint32_t          rcc_bdcr;
+  uint32_t          rcc_ccipr1;
+  uint32_t          rcc_ccipr2;
+  uint32_t          rcc_ccipr3;
+  uint32_t          flash_acr;
+  stm32_pllcfg_t    plls[3];
+} halclkcfg_t;
 
 /*===========================================================================*/
 /* Driver macros.                                                            */
@@ -511,8 +465,12 @@ typedef uint32_t halcnt_t;
 #include "stm32_isr.h"
 #include "stm32_exti.h"
 #include "stm32_rcc.h"
-#include "stm32_limits.h"
 #include "stm32_tim.h"
+
+#if defined(HAL_LLD_USE_CLOCK_MANAGEMENT) && !defined(__DOXYGEN__)
+extern const halclkcfg_t hal_clkcfg_reset;
+extern const halclkcfg_t hal_clkcfg_default;
+#endif
 
 #if HAL_USE_ADC || HAL_USE_DAC || HAL_USE_I2C || HAL_USE_SPI ||             \
     defined(__DOXYGEN__)
@@ -524,6 +482,10 @@ extern "C" {
 #endif
   void hal_lld_init(void);
   void stm32_clock_init(void);
+#if defined(HAL_LLD_USE_CLOCK_MANAGEMENT) || defined(__DOXYGEN__)
+  bool hal_lld_clock_switch_mode(const halclkcfg_t *ccp);
+  halfreq_t hal_lld_get_clock_point(halclkpt_t clkpt);
+#endif
 #ifdef __cplusplus
 }
 #endif
