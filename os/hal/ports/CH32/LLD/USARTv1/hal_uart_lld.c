@@ -886,7 +886,7 @@ void uart_lld_stop(UARTDriver *uartp) {
 
 #if CH32_UART_USE_USART8
     if (&UARTD8 == uartp) {
-      nvicDisableVector(USART8_IRQn);
+      NVIC_DisableIRQ(USART8_IRQn);
       resetHB1(RCC_USART8RST);
       disableHB1(RCC_USART8EN);
       return;
