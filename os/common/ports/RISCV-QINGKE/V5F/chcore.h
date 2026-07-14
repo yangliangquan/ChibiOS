@@ -410,37 +410,37 @@ struct port_context {
  * @{
  */
 #define STORE_REGISTER(r, offset)                                                                                      \
-    asm volatile("sw "                                                                                                 \
+    __asm volatile("sw "                                                                                                 \
                  "x" __CH_STRINGIFY(r) ","                                                                             \
                                        "%0(sp)" ::"i"(offset)                                                          \
                  : "memory");
 #define LOAD_REGISTER(r, offset)                                                                                       \
-    asm volatile("lw "                                                                                                 \
+    __asm volatile("lw "                                                                                                 \
                  "x" __CH_STRINGIFY(r) ","                                                                             \
                                        "%0(sp)" ::"i"(offset)                                                          \
                  : "x" __CH_STRINGIFY(r));
 #define STORE_FLOAT_REGISTER(r, offset)                                                                                \
-    asm volatile("fsw "                                                                                                \
+    __asm volatile("fsw "                                                                                                \
                  "f" __CH_STRINGIFY(r) ","                                                                             \
                                        "%0(sp)" ::"i"(offset)                                                          \
                  : "memory");
 #define LOAD_FLOAT_REGISTER(r, offset)                                                                                 \
-    asm volatile("flw "                                                                                                \
+    __asm volatile("flw "                                                                                                \
                  "f" __CH_STRINGIFY(r) ","                                                                             \
                                        "%0(sp)" ::"i"(offset)                                                          \
                  : "f" __CH_STRINGIFY(r));
 
 #define STORE_CSR(r, offset)                                                                                           \
-    asm volatile("csrr t0, " __CH_STRINGIFY(r));                                                                       \
-    asm volatile("sw t0, %0(sp)" ::"i"(offset) :);
+    __asm volatile("csrr t0, " __CH_STRINGIFY(r));                                                                       \
+    __asm volatile("sw t0, %0(sp)" ::"i"(offset) :);
 #define LOAD_CSR(r, offset)                                                                                            \
-    asm volatile("lw t0, %0(sp)" ::"i"(offset) :);                                                                     \
-    asm volatile("csrw " __CH_STRINGIFY(r) ","                                                                         \
+    __asm volatile("lw t0, %0(sp)" ::"i"(offset) :);                                                                     \
+    __asm volatile("csrw " __CH_STRINGIFY(r) ","                                                                         \
                                            "t0"                                                                        \
                  :);
 
 #define RELOAD_SP(offset)                                                                                              \
-    asm volatile("addi "                                                                                               \
+    __asm volatile("addi "                                                                                               \
                  "sp, sp, %0" ::"i"(offset)                                                                            \
                  :);
 /** @} */
@@ -915,7 +915,7 @@ static __attribute__((always_inline)) inline void _port_irq_epilogue(void)
     }
     recover_context_irq();
 
-    asm volatile("mret");
+    __asm volatile("mret");
 }
 
 #endif /* !defined(_FROM_ASM_) */
