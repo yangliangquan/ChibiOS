@@ -84,6 +84,7 @@
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
+extern __attribute__((always_inline)) static inline void save_context(void);
 __attribute__((always_inline)) static inline void save_context(void)
 {
     RELOAD_SP(-sizeof(struct port_intctx));
@@ -153,6 +154,7 @@ __attribute__((always_inline)) static inline void save_context(void)
     STORE_CSR(mepc, offsetof(struct port_intctx, mepc));
 }
 
+extern __attribute__((always_inline)) static inline void recover_context(void);
 __attribute__((always_inline)) static inline void recover_context(void)
 {
     LOAD_REGISTER(1, offsetof(struct port_intctx, x1));
@@ -222,6 +224,7 @@ __attribute__((always_inline)) static inline void recover_context(void)
     RELOAD_SP(sizeof(struct port_intctx));
 }
 
+extern __attribute__((always_inline)) static inline void save_context_irq(void);
 __attribute__((always_inline)) static inline void save_context_irq(void)
 {
     RELOAD_SP(-sizeof(struct port_extctx));
@@ -289,6 +292,7 @@ __attribute__((always_inline)) static inline void save_context_irq(void)
 #endif
 }
 
+extern __attribute__((always_inline)) static inline void recover_context_irq(void);
 __attribute__((always_inline)) static inline void recover_context_irq(void)
 {
     LOAD_REGISTER(1, offsetof(struct port_extctx, x1));
@@ -393,23 +397,13 @@ __attribute__((naked)) void _port_switch(thread_t *ntp, thread_t *otp)
     asm volatile("ret");
 }
 
-// __attribute__((naked)) void __port_exit_from_isr(void)
-// {
-//     recover_context_irq();
-// }
-
-// __attribute__((naked)) void __port_switch_from_isr(void)
-// {
-//     chSysLockFromISR();
-//     chSchDoPreemption();
-//     chSysUnlockFromISR();
-// }
-
+extern __attribute__((always_inline)) static inline void _port_irq_prologue(void);
 __attribute__((always_inline)) static inline void _port_irq_prologue(void)
 {
     save_context_irq();
 }
 
+extern __attribute__((always_inline)) static inline void _port_irq_epilogue(void);
 __attribute__((always_inline)) static inline void _port_irq_epilogue(void)
 {
     

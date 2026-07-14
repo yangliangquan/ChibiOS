@@ -407,7 +407,7 @@ __attribute__( ( always_inline ) ) RV_STATIC_INLINE uint32_t NVIC_OwnCoreGetAllo
 __attribute__( ( always_inline ) ) RV_STATIC_INLINE void __WFI(void)
 {
   NVIC->SCTLR &= ~(1<<3);	// wfi
-  asm volatile ("wfi");
+  __asm volatile ("wfi");
 }
 
 /*********************************************************************
@@ -454,7 +454,7 @@ __attribute__( ( always_inline ) ) RV_STATIC_INLINE void __WFE(void)
   WFE_WkupSource = 0;
   NVIC->EPR = 0xFFFFFFFF;
   NVIC->SCTLR |= (1<<3);
-  asm volatile ("wfi");
+  __asm volatile ("wfi");
 
   for(;;)
   {
@@ -463,7 +463,7 @@ __attribute__( ( always_inline ) ) RV_STATIC_INLINE void __WFE(void)
     {
       break;
     } else{
-     asm volatile ("wfi");
+     __asm volatile ("wfi");
     }
   }  
   WFE_WkupSource = *(__IO uint32_t*)0x40010414;
