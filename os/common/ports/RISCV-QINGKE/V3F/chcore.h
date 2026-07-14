@@ -893,9 +893,16 @@ static __attribute__((always_inline)) inline void _port_irq_prologue(void)
 }
 
 /* Forward declarations for kernel functions used by _port_irq_epilogue.
-   These are declared in chschd.h, included later via ch.h -> chsys.h -> chschd.h.*/
+   These are declared in chschd.h, included later via ch.h -> chsys.h -> chschd.h.
+   Must use C linkage since they are defined in C code. */
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern bool chSchIsPreemptionRequired(void);
 extern void chSchDoPreemption(void);
+#ifdef __cplusplus
+}
+#endif
 
 static __attribute__((always_inline)) inline void _port_irq_epilogue(void)
 {
