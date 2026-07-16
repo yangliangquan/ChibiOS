@@ -25,6 +25,7 @@
 #define       __O     volatile                /* defines 'write only' permissions   */
 #define       __IO    volatile                /* defines 'read / write' permissions */
 
+#if 0
 /* Standard Peripheral Library old types (maintained for legacy purpose) */
 typedef __I uint64_t vuc64;  /* Read Only */
 typedef __I uint32_t vuc32;  /* Read Only */
@@ -65,6 +66,7 @@ typedef int64_t  s64;
 typedef int32_t  s32;
 typedef int16_t  s16;
 typedef int8_t   s8;
+#endif
 
 typedef enum {NoREADY = 0, READY = !NoREADY} ErrorStatus;
 
@@ -591,7 +593,7 @@ __attribute__( ( always_inline ) ) RV_STATIC_INLINE void NVIC_EventWakeUPCmd(IRQ
  */
 __attribute__( ( always_inline ) ) RV_STATIC_INLINE void NVIC_ClearPendingWakeuUpEvent(IRQn_Type IRQn)
 {
-  if((IRQn > 31) && (IRQn < 8))  return ;
+  if((IRQn > 31) || (IRQn < 8))  return ;
   NVIC->EPR = IRQn;
 }
 

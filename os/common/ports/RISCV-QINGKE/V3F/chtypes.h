@@ -80,19 +80,25 @@ typedef uint64_t            port_stkline_t;
  * @brief   ROM constant modifier.
  * @note    It is set to use the "const" keyword in this port.
  */
+#ifndef ROMCONST
 #define ROMCONST            CC_ROMCONST
+#endif
 
 /**
  * @brief   Makes functions not inlineable.
  * @note    If the compiler does not support such attribute then some
  *          time-dependent services could be degraded.
  */
+#ifndef NOINLINE
 #define NOINLINE            CC_NO_INLINE
+#endif
 
 /**
  * @brief   Memory alignment enforcement for variables.
  */
+#ifndef ALIGNED_VAR
 #define ALIGNED_VAR(n)      CC_ALIGN_DATA(n)
+#endif
 
 /**
  * @brief   Size of a pointer.

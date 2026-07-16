@@ -72,7 +72,7 @@
 /**
  * @brief   Lowest priority level.
  */
-#define PORT_LOWEST_PRIORITY            256
+#define PORT_LOWEST_PRIORITY            255
 
 /**
  * @brief   Highest priority level.
