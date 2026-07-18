@@ -193,6 +193,11 @@ enum {
 #define CH32_SDMMC_HANDLER SDMMC_IRQHandler
 #define CH32_SDMMC_NUMBER SDMMC_IRQn
 
+/* SDIO attributes.*/
+#define CH32_HAS_SDIO1 TRUE
+#define CH32_SDIO_HANDLER SDIO_IRQHandler
+#define CH32_SDIO_NUMBER SDIO_IRQn
+
 /* SPI attributes.*/
 #define CH32_HAS_SPI1 TRUE
 #define CH32_SPI1_SUPPORTS_I2S TRUE

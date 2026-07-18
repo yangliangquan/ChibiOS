@@ -52,7 +52,11 @@ ifneq ($(findstring HAL_USE_RTC TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1/hal_rtc_lld.c
 endif
 ifneq ($(findstring HAL_USE_SDC TRUE,$(HALCONF)),)
+ifneq ($(findstring CH32_SDC_USE_SDIO TRUE,$(MCUCONF)),)
+PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1/hal_sdc_lld.c
+else
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1/hal_sdc_lld.c
+endif
 endif
 ifneq ($(findstring HAL_USE_SERIAL TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_serial_lld.c
@@ -112,6 +116,12 @@ endif
 
 # Required include directories
 
+# Select SDMMC or SDIO LLD include path
+ifneq ($(findstring CH32_SDC_USE_SDIO TRUE,$(MCUCONF)),)
+CH32_SDC_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1
+else
+CH32_SDC_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1
+endif
 
 ifneq ($(findstring CH32_OTG_USE_USB1 TRUE,$(MCUCONF)),)
 PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
@@ -129,7 +139,7 @@ PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/GPIOv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RNGv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1 \
+              $(CH32_SDC_LLDINC) \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1 \
@@ -150,7 +160,7 @@ PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/GPIOv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RNGv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1 \
+              $(CH32_SDC_LLDINC) \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1 \

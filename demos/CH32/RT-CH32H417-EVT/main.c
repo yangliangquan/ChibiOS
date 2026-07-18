@@ -15,6 +15,7 @@
 */
 
 #include <string.h>
+#include <time.h>
 
 #include "ch.h"
 #include "hal.h"
@@ -724,6 +725,13 @@ static THD_FUNCTION(CANThread, arg) {
  */
 #define CH32_DEMO_USE_FATFS           1
 
+/*
+ * SDIO vs SDMMC peripheral selection.
+ * Define CH32_DEMO_USE_SDIO to use the SDIO peripheral test,
+ * otherwise the SDMMC peripheral test is used.
+ */
+/* #define CH32_DEMO_USE_SDIO */
+
 /*===========================================================================*/
 /* SDC raw read/write test thread.                                          */
 /*===========================================================================*/
@@ -1310,6 +1318,235 @@ fatfs_cleanup:
 }
 #endif /* CH32_DEMO_USE_FATFS */
 
+/*===========================================================================*/
+/* SDIO test thread (when CH32_DEMO_USE_SDIO is defined).                   */
+/*===========================================================================*/
+#if CH32_DEMO_USE_SDIO || defined(__DOXYGEN__)
+
+static THD_WORKING_AREA(waSDIOThread, 4096 * 2);
+static THD_FUNCTION(SDIOThread, arg) {
+  (void)arg;
+  uint32_t blk_cnt   = 0;
+  uint32_t rd_cnt    = 0;
+  uint32_t wr_cnt    = 0;
+  uint32_t vfy_cnt   = 0;
+  uint32_t err_cnt   = 0;
+  BlockDeviceInfo info;
+  __attribute__((aligned(16))) uint8_t  buf[MMCSD_BLOCK_SIZE];
+  __attribute__((aligned(16))) uint8_t  ref[MMCSD_BLOCK_SIZE];
+  uint32_t i;
+  msg_t    result;
+
+  chRegSetThreadName("SDIOThread");
+
+  /* Configure SDIO GPIO pins, AF8 for SDIO on CH32H417.
+   * SDIO pin mapping (EVT board):
+   *   SDCLK = PB10, SDCMD = PB11
+   *   SDD0  = PE8,  SDD1  = PE9
+   *   SDD2  = PE10, SDD3  = PE11 */
+  palSetPadMode(GPIOB, GPIO_PIN10, PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDCLK  */
+  palSetPadMode(GPIOB, GPIO_PIN11, PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDCMD  */
+  palSetPadMode(GPIOE, GPIO_PIN8,  PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDD0   */
+  palSetPadMode(GPIOE, GPIO_PIN9,  PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDD1   */
+  palSetPadMode(GPIOE, GPIO_PIN10, PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDD2   */
+  palSetPadMode(GPIOE, GPIO_PIN11, PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDD3   */
+
+  /* Start the SDC driver with default configuration (4-bit mode). */
+  chprintf((BaseSequentialStream *)&SD1, "SDIO: Start SDC driver\r\n");
+  sdcStart(&SDCD1, NULL);
+
+  /* Short delay for card power-up. */
+  chThdSleepMilliseconds(100);
+
+  while (true) {
+    chprintf((BaseSequentialStream *)&SD1, "SDIO: Entry\r\n");
+
+    /*------------------------------------------------------------------------*/
+    /* 1. Check card insertion.                                              */
+    /*------------------------------------------------------------------------*/
+    if (!sdcIsCardInserted(&SDCD1)) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDIO: No card inserted\r\n");
+      chThdSleepMilliseconds(2000);
+      continue;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 2. Connect to the SD card.                                            */
+    /*------------------------------------------------------------------------*/
+    result = sdcConnect(&SDCD1);
+    if (result != HAL_SUCCESS) {
+
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDIO: Connect failed, errors=0x%08lx\r\n",
+               (unsigned long)SDCD1.errors);
+      
+      chThdSleepMilliseconds(2000);
+      continue;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 3. Get card info.                                                     */
+    /*------------------------------------------------------------------------*/
+    if (sdcGetInfo(&SDCD1, &info) == HAL_SUCCESS) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDIO: Capacity: %lu blocks, %u bytes/block, total %lu KB\r\n",
+               (unsigned long)info.blk_num, info.blk_size,
+               (unsigned long long)((uint64_t)info.blk_num *
+                                    (uint64_t)info.blk_size / 1024));
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 4. Read block 0 (MBR).                                               */
+    /*------------------------------------------------------------------------*/
+    chprintf((BaseSequentialStream *)&SD1, "SDIO: Test 1 - Read block 0 (MBR)\r\n");
+
+    if (sdcRead(&SDCD1, 0, buf, 1) == HAL_SUCCESS) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDIO:   OK [%02x %02x %02x %02x %02x %02x %02x %02x "
+                       "%02x %02x %02x %02x %02x %02x %02x %02x ...]\r\n",
+               buf[0],  buf[1],  buf[2],  buf[3],
+               buf[4],  buf[5],  buf[6],  buf[7],
+               buf[8],  buf[9],  buf[10], buf[11],
+               buf[12], buf[13], buf[14], buf[15]);
+      rd_cnt++;
+      blk_cnt++;
+    }
+    else {
+      sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDIO:   FAILED, errors=0x%08lx\r\n", (unsigned long)err);
+      err_cnt++;
+      goto sdio_cleanup;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* 5. Write pattern to test block and read back to verify.               */
+    /*------------------------------------------------------------------------*/
+    chprintf((BaseSequentialStream *)&SD1,
+             "SDIO: Test 2 - Write incrementing-byte pattern to block 0\r\n");
+
+    for (i = 0; i < MMCSD_BLOCK_SIZE; i++) {
+      buf[i] = (uint8_t)i;
+    }
+
+    if (sdcWrite(&SDCD1, 0, buf, 1) != HAL_SUCCESS) {
+      sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDIO:   Write FAILED, errors=0x%08lx\r\n", (unsigned long)err);
+      err_cnt++;
+      goto sdio_cleanup;
+    }
+    wr_cnt++;
+
+    /* Read back and verify. */
+    memset(ref, 0, MMCSD_BLOCK_SIZE);
+    if (sdcRead(&SDCD1, 0, ref, 1) != HAL_SUCCESS) {
+      sdcflags_t err = sdcGetAndClearErrors(&SDCD1);
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDIO:   Read-back FAILED, errors=0x%08lx\r\n",
+               (unsigned long)err);
+      err_cnt++;
+      goto sdio_cleanup;
+    }
+    rd_cnt++;
+
+    if (memcmp(buf, ref, MMCSD_BLOCK_SIZE) == 0) {
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDIO:   Verify PASSED (%u bytes match)\r\n",
+               MMCSD_BLOCK_SIZE);
+      vfy_cnt++;
+    }
+    else {
+      for (i = 0; i < MMCSD_BLOCK_SIZE; i++) {
+        if (buf[i] != ref[i]) {
+          break;
+        }
+      }
+      chprintf((BaseSequentialStream *)&SD1,
+               "SDIO:   Verify FAILED at offset %u "
+               "(expected 0x%02x, got 0x%02x)\r\n",
+               i, buf[i], ref[i]);
+      err_cnt++;
+      goto sdio_cleanup;
+    }
+    blk_cnt++;
+
+    palTogglePad(GPIOD, GPIO_PIN4);
+
+sdio_cleanup:
+    sdcDisconnect(&SDCD1);
+
+    chprintf((BaseSequentialStream *)&SD1,
+             "SDIO: === Summary: %lu blk xfers, "
+             "%lu reads, %lu writes, %lu verifies, %lu errors ===\r\n",
+             (unsigned long)blk_cnt,
+             (unsigned long)rd_cnt,
+             (unsigned long)wr_cnt,
+             (unsigned long)vfy_cnt,
+             (unsigned long)err_cnt);
+
+    chThdSleepMilliseconds(3000);
+  }
+}
+#endif /* CH32_DEMO_USE_SDIO */
+
+/*===========================================================================*/
+/* RTC driver test thread.                                                   */
+/*===========================================================================*/
+
+static THD_WORKING_AREA(waRTCThread, 1024);
+static THD_FUNCTION(RTCThread, arg) {
+  (void)arg;
+  RTCDateTime timespec;
+  RTCAlarm alarmspec;
+  struct tm timp;
+  uint32_t tv_msec;
+
+  chRegSetThreadName("RTCThread");
+
+  /* Initialize RTC driver.*/
+  rtcInit();
+
+  /* Set prescaler for LSI clock (~40 kHz). 40000-1 = 39999 => 1 Hz.*/
+  rtc_lld_set_prescaler(CH32_RTC_CLOCK_FREQ - 1);
+
+  /* Set initial time: 2025-01-01 00:00:00 UTC (Wednesday).*/
+  timp.tm_year = 125;   /* years since 1900 */
+  timp.tm_mon  = 0;     /* January (0-based) */
+  timp.tm_mday = 1;
+  timp.tm_hour = 0;
+  timp.tm_min  = 0;
+  timp.tm_sec  = 0;
+  timp.tm_isdst = 0;
+  rtcConvertStructTmToDateTime(&timp, 0, &timespec);
+  rtcSetTime(&RTCD1, &timespec);
+
+  chprintf((BaseSequentialStream *)&SD1,
+           "RTC: Time set, starting periodic readout\r\n");
+
+  /* Set alarm for 10 seconds from now.*/
+  rtcGetTime(&RTCD1, &timespec);
+  rtcConvertDateTimeToStructTm(&timespec, &timp, &tv_msec);
+  alarmspec.tv_sec = mktime(&timp) + 10;
+  rtcSetAlarm(&RTCD1, 0, &alarmspec);
+  chprintf((BaseSequentialStream *)&SD1,
+           "RTC: Alarm set for +10 seconds\r\n");
+
+  while (true) {
+    rtcGetTime(&RTCD1, &timespec);
+    rtcConvertDateTimeToStructTm(&timespec, &timp, &tv_msec);
+
+    chprintf((BaseSequentialStream *)&SD1,
+             "RTC: %04d-%02d-%02d %02d:%02d:%02d.%03lu\r\n",
+             timp.tm_year + 1900, timp.tm_mon + 1, timp.tm_mday,
+             timp.tm_hour, timp.tm_min, timp.tm_sec,
+             (unsigned long)tv_msec);
+
+    chThdSleepMilliseconds(1000);
+  }
+}
+
 static void cmd_hello(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void)argc;
   (void)argv;
@@ -1376,7 +1613,11 @@ int main(void)
     // chThdCreateStatic(waI2SThread, sizeof(waI2SThread), NORMALPRIO, I2SThread, NULL);
     // chThdCreateStatic(waDACThread, sizeof(waDACThread), NORMALPRIO, DACThread, NULL);
     // chThdCreateStatic(waCANThread, sizeof(waCANThread), NORMALPRIO, CANThread, NULL);
-#if CH32_DEMO_USE_FATFS
+    chThdCreateStatic(waRTCThread, sizeof(waRTCThread), NORMALPRIO, RTCThread, NULL);
+#if CH32_DEMO_USE_SDIO
+    chThdCreateStatic(waSDIOThread, sizeof(waSDIOThread),
+                      NORMALPRIO - 1, SDIOThread, NULL);
+#elif CH32_DEMO_USE_FATFS
     chThdCreateStatic(waFatFSThread, sizeof(waFatFSThread),
                       NORMALPRIO - 1, FatFSThread, NULL);
 #else

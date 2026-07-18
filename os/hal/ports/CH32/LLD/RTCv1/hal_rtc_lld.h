@@ -47,7 +47,7 @@
 /**
  * @brief   Number of alarms available.
  */
-#define RTC_ALARMS                  2
+#define RTC_ALARMS                  1
 
 /**
  * @brief   Presence of a local persistent storage.
@@ -71,6 +71,16 @@
 #if !defined(CH32_RTC_USE_RTC1) || defined(__DOXYGEN__)
 #define CH32_RTC_USE_RTC1                  FALSE
 #endif
+
+/**
+ * @brief   RTC prescaler reload value.
+ * @details Must match the RTC clock source frequency to achieve 1 Hz.
+ *          LSI (~40 kHz) -> 39999, LSE (32768 Hz) -> 32767.
+ * @note    The default is 39999 for LSI clock source.
+ */
+#if !defined(CH32_RTC_CLOCK_FREQ) || defined(__DOXYGEN__)
+#define CH32_RTC_CLOCK_FREQ                 40000
+#endif
 /** @} */
 
 /*===========================================================================*/
@@ -86,7 +96,8 @@
  * @brief   Type of an RTC event.
  */
 typedef enum {
-  RTC_EVENT_SECOND = 0                  /** Triggered every second.         */
+  RTC_EVENT_SECOND = 0,                 /** Triggered every second.         */
+  RTC_EVENT_ALARM = 1                   /** Triggered on alarm match.       */
 } rtcevent_t;
 
 /**
@@ -100,14 +111,14 @@ typedef void (*rtccb_t)(RTCDriver *rtcp, rtcevent_t event);
  */
 typedef struct {
   /* End of the mandatory fields.*/
-  uint32_t                  dummy;
+  uint32_t                  tv_sec;     /** Alarm time in seconds.          */
 } RTCAlarm;
 
 /**
  * @brief   Implementation-specific @p RTCDriver fields.
  */
 #define rtc_lld_driver_fields                                              \
-  uint32_t                  dummy;
+  rtccb_t                     callback;
 
 /*===========================================================================*/
 /* Driver macros.                                                            */
@@ -138,6 +149,9 @@ extern "C" {
 #if RTC_SUPPORTS_CALLBACKS == TRUE
   void rtc_lld_set_callback(RTCDriver *rtcp, rtccb_t callback);
 #endif
+  void rtc_lld_set_prescaler(uint32_t prescaler);
+  void rtc_lld_get_counter(uint32_t *sec, uint32_t *msec);
+  void rtc_lld_set_counter(uint32_t sec);
 #ifdef __cplusplus
 }
 #endif

@@ -239,7 +239,7 @@
 /*
  * RTC driver system settings.
  */
-#define STM32_PWM_USE_RTC                   FALSE
+#define CH32_RTC_USE_RTC1                   TRUE
 
 
 /*
@@ -291,8 +291,11 @@
  * SDC driver system settings.
  */
 #define CH32_SDC_USE_SDC1                  TRUE
+#define CH32_SDC_USE_SDIO                  FALSE
 #define CH32_SDC_SDMMC_CLOCK               600000000
+#define CH32_SDC_SDIO_CLOCK                96000000
 #define CH32_SDC_SDMMC_IRQ_PRIORITY        9
+#define CH32_SDC_SDIO_IRQ_PRIORITY         9
 
 /*
  * USB (OTG) driver system settings.
