@@ -244,6 +244,22 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
     p->SPEED = 0xffffffff;
 }
 
+iomode_t palReadLineMode(ioline_t line){
+    uint8_t pad = PAL_PAD(line);
+    GPIO_TypeDef *port = PAL_PORT(line);
+
+    if(pad < 8){
+        uint32_t cfg = port->CFGLR;
+        uint8_t mode = (cfg >> (pad * 4)) & 0xF;
+        return (iomode_t)mode;
+    }
+    else {
+        uint32_t cfg = port->CFGHR;
+        uint8_t mode = (cfg >> ((pad - 8) * 4)) & 0xF;
+        return (iomode_t)mode;
+    }
+}
+
 #if PAL_USE_CALLBACKS || PAL_USE_WAIT
 void _pal_lld_enablepadevent(ioportid_t port, uint8_t pad, ioeventmode_t mode)
 {

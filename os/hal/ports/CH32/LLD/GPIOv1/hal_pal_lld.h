@@ -605,6 +605,7 @@ extern "C" {
   void _pal_lld_setgroupmode(ioportid_t port,
                              ioportmask_t mask,
                              iomode_t mode);
+  iomode_t palReadLineMode(ioline_t line);
 #if PAL_USE_CALLBACKS || PAL_USE_WAIT
   void _pal_lld_enablepadevent(ioportid_t port, uint8_t pad, iomode_t mode);
   void _pal_lld_disablepadevent(ioportid_t port, uint8_t pad);
