@@ -241,21 +241,51 @@ typedef uint32_t iopadid_t;
 #define GPIO_PIN15             15U
 #define GPIO_PIN16             16U
 
+#if !defined(PIN_MODE_INPUT)
 #define PIN_MODE_INPUT(n)           (0U << ((n) * 2U))
+#endif
+#if !defined(PIN_MODE_OUTPUT)
 #define PIN_MODE_OUTPUT(n)          (1U << ((n) * 2U))
+#endif
+#if !defined(PIN_MODE_ALTERNATE)
 #define PIN_MODE_ALTERNATE(n)       (2U << ((n) * 2U))
+#endif
+#if !defined(PIN_MODE_ANALOG)
 #define PIN_MODE_ANALOG(n)          (3U << ((n) * 2U))
+#endif
+#if !defined(PIN_ODR_LOW)
 #define PIN_ODR_LOW(n)              (0U << (n))
+#endif
+#if !defined(PIN_ODR_HIGH)
 #define PIN_ODR_HIGH(n)             (1U << (n))
+#endif
+#if !defined(PIN_OTYPE_PUSHPULL)
 #define PIN_OTYPE_PUSHPULL(n)       (0U << (n))
+#endif
+#if !defined(PIN_OTYPE_OPENDRAIN)
 #define PIN_OTYPE_OPENDRAIN(n)      (1U << (n))
+#endif
+#if !defined(PIN_OSPEED_VERYLOW)
 #define PIN_OSPEED_VERYLOW(n)       (0U << ((n) * 2U))
+#endif
+#if !defined(PIN_OSPEED_LOW)
 #define PIN_OSPEED_LOW(n)           (1U << ((n) * 2U))
+#endif
+#if !defined(PIN_OSPEED_MEDIUM)
 #define PIN_OSPEED_MEDIUM(n)        (2U << ((n) * 2U))
+#endif
+#if !defined(PIN_OSPEED_HIGH)
 #define PIN_OSPEED_HIGH(n)          (3U << ((n) * 2U))
+#endif
+#if !defined(PIN_PUPDR_FLOATING)
 #define PIN_PUPDR_FLOATING(n)       (0U << ((n) * 2U))
+#endif
+#if !defined(PIN_PUPDR_PULLUP)
 #define PIN_PUPDR_PULLUP(n)         (1U << ((n) * 2U))
+#endif
+#if !defined(PIN_PUPDR_PULLDOWN)
 #define PIN_PUPDR_PULLDOWN(n)       (2U << ((n) * 2U))
+#endif
 
 /*===========================================================================*/
 /* Implementation, some of the following macros could be implemented as      */
