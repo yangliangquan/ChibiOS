@@ -187,6 +187,10 @@ enum {
 /* QUADSPI attributes.*/
 #define CH32_HAS_QUADSPI1 TRUE
 
+/* QSPI attributes.*/
+#define CH32_HAS_QSPI1 TRUE
+#define CH32_HAS_QSPI2 TRUE
+
 /* SDMMC attributes.*/
 #define CH32_HAS_SDMMC1 TRUE
 #define CH32_HAS_SDMMC2 FALSE

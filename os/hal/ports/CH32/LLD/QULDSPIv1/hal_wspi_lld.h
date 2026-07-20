@@ -16,7 +16,7 @@
 
 /**
  * @file    hal_wspi_lld.h
- * @brief   CH32 WSPI subsystem low level driver header.
+ * @brief   CH32 WSPI subsystem low level driver header (QSPI peripheral).
  *
  * @addtogroup WSPI
  * @{
@@ -39,6 +39,15 @@
 #define WSPI_DEFAULT_CFG_MASKS              TRUE
 /** @} */
 
+/**
+ * @name    CH32H417 QSPI memory-mapped base addresses
+ * @{
+ */
+#define WSPI_MEMMAP_BASE                    0x90000000U
+#define WSPI1_MEMMAP_BASE                   0x90000000U
+#define WSPI2_MEMMAP_BASE                   0x98000000U
+/** @} */
+
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
 /*===========================================================================*/
@@ -54,6 +63,15 @@
  */
 #if !defined(CH32_WSPI_USE_WSPI1) || defined(__DOXYGEN__)
 #define CH32_WSPI_USE_WSPI1             FALSE
+#endif
+
+/**
+ * @brief   WSPID2 driver enable switch.
+ * @details If set to @p TRUE the support for WSPID2 is included.
+ * @note    The default is @p FALSE.
+ */
+#if !defined(CH32_WSPI_USE_WSPI2) || defined(__DOXYGEN__)
+#define CH32_WSPI_USE_WSPI2             FALSE
 #endif
 /** @} */
 
@@ -73,15 +91,27 @@
  * @brief   Low level fields of the WSPI driver structure.
  */
 #define wspi_lld_driver_fields                                              \
-  /* Dummy field, it is not needed.*/                                       \
-  uint32_t                  dummy;
+  /* Pointer to the QSPI registers block.*/                                 \
+  QSPI_TypeDef                *qspi;
 
 /**
  * @brief   Low level fields of the WSPI configuration structure.
  */
 #define wspi_lld_config_fields                                              \
-  /* Dummy configuration, it is not needed.*/                               \
-  uint32_t                  dummy;
+  /* QSPI prescaler value.*/                                                \
+  uint32_t                    prescaler;                                    \
+  /* QSPI clock mode (0 or 3).*/                                            \
+  uint32_t                    ckmode;                                       \
+  /* QSPI chip select high time (cycles).*/                                 \
+  uint32_t                    cshTime;                                      \
+  /* QSPI flash size (2^(FSIZE+1) bytes).*/                                 \
+  uint32_t                    fsize;                                        \
+  /* QSPI flash select (0 or 1).*/                                          \
+  uint32_t                    fselect;                                      \
+  /* QSPI dual flash enable.*/                                              \
+  uint32_t                    dflash;                                       \
+  /* QSPI FIFO threshold.*/                                                 \
+  uint32_t                    fifoThreshold;
 
 /*===========================================================================*/
 /* External declarations.                                                    */
@@ -89,6 +119,10 @@
 
 #if (CH32_WSPI_USE_WSPI1 == TRUE) && !defined(__DOXYGEN__)
 extern WSPIDriver WSPID1;
+#endif
+
+#if (CH32_WSPI_USE_WSPI2 == TRUE) && !defined(__DOXYGEN__)
+extern WSPIDriver WSPID2;
 #endif
 
 #ifdef __cplusplus

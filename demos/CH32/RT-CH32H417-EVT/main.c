@@ -725,6 +725,8 @@ static THD_FUNCTION(CANThread, arg) {
  */
 #define CH32_DEMO_USE_FATFS           1
 
+#define CH32_DEMO_USE_SDIO            1
+
 /*
  * SDIO vs SDMMC peripheral selection.
  * Define CH32_DEMO_USE_SDIO to use the SDIO peripheral test,
@@ -1348,8 +1350,8 @@ static THD_FUNCTION(SDIOThread, arg) {
   palSetPadMode(GPIOB, GPIO_PIN11, PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDCMD  */
   palSetPadMode(GPIOE, GPIO_PIN8,  PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDD0   */
   palSetPadMode(GPIOE, GPIO_PIN9,  PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDD1   */
-  palSetPadMode(GPIOE, GPIO_PIN10, PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDD2   */
-  palSetPadMode(GPIOE, GPIO_PIN11, PAL_CH32_ALTERNATE_PUSHPULL(8));  /* SDD3   */
+  palSetPadMode(GPIOB, GPIO_PIN3, PAL_CH32_ALTERNATE_PUSHPULL(9));  /* SDD2   */
+  palSetPadMode(GPIOB, GPIO_PIN4, PAL_CH32_ALTERNATE_PUSHPULL(9));  /* SDD3   */
 
   /* Start the SDC driver with default configuration (4-bit mode). */
   chprintf((BaseSequentialStream *)&SD1, "SDIO: Start SDC driver\r\n");
@@ -1492,6 +1494,173 @@ sdio_cleanup:
 #endif /* CH32_DEMO_USE_SDIO */
 
 /*===========================================================================*/
+/* WSPI (QSPI) driver test thread.                                          */
+/*===========================================================================*/
+
+/*
+ * QSPI Flash commands (typical for W25Qxx series).
+ */
+#define QSPI_FLASH_CMD_JEDEC_ID            0x9FU
+#define QSPI_FLASH_CMD_READ_SR1            0x05U
+#define QSPI_FLASH_CMD_READ_SR2            0x35U
+#define QSPI_FLASH_CMD_WRITE_ENABLE        0x06U
+#define QSPI_FLASH_CMD_SECTOR_ERASE        0x20U
+#define QSPI_FLASH_CMD_PAGE_PROGRAM        0x02U
+#define QSPI_FLASH_CMD_FAST_READ           0x0BU
+#define QSPI_FLASH_CMD_FAST_READ_QUAD      0xEBU
+#define QSPI_FLASH_CMD_ENABLE_RESET        0x66U
+#define QSPI_FLASH_CMD_RESET_DEVICE        0x99U
+
+/*
+ * WSPI configuration for QSPI flash.
+ * PB2 = SCK (AF9), PB6 = CS (AF10)
+ * PF6 = IO3 (AF10), PF7 = IO2 (AF10), PF8 = IO0 (AF10), PF9 = IO1 (AF10)
+ */
+static const WSPIConfig wspi_cfg = {
+  .end_cb         = NULL,
+  .error_cb       = NULL,
+  .prescaler      = 3,
+  .ckmode         = 0,
+  .cshTime        = 7,
+  .fsize          = 22,
+  .fselect        = 1,
+  .dflash         = 0,
+  .fifoThreshold  = 10
+};
+
+static THD_WORKING_AREA(waWSPIThread, 2048);
+static THD_FUNCTION(WSPIThread, arg) {
+  (void)arg;
+  wspi_command_t cmd;
+
+  chRegSetThreadName("WSPIThread");
+
+  /* Configure QSPI GPIO pins.
+   * SCK  = PB2  (AF9)
+   * CS   = PB6  (AF10)
+   * IO0  = PF8  (AF10)
+   * IO1  = PF9  (AF10)
+   * IO2  = PF7  (AF10)
+   * IO3  = PF6  (AF10) */
+  palSetPadMode(GPIOB, GPIO_PIN2,  PAL_CH32_ALTERNATE_PUSHPULL(9));   /* SCK  */
+  palSetPadMode(GPIOB, GPIO_PIN6,  PAL_CH32_ALTERNATE_PUSHPULL(10));  /* CS   */
+  palSetPadMode(GPIOF, GPIO_PIN8,  PAL_CH32_ALTERNATE_PUSHPULL(10));  /* IO0  */
+  palSetPadMode(GPIOF, GPIO_PIN9,  PAL_CH32_ALTERNATE_PUSHPULL(10));  /* IO1  */
+  palSetPadMode(GPIOF, GPIO_PIN7,  PAL_CH32_ALTERNATE_PUSHPULL(10));  /* IO2  */
+  palSetPadMode(GPIOF, GPIO_PIN6,  PAL_CH32_ALTERNATE_PUSHPULL(10));  /* IO3  */
+
+  /* Start WSPI driver. */
+  wspiStart(&WSPID1, &wspi_cfg);
+
+  chprintf((BaseSequentialStream *)&SD1, "WSPI: QSPI driver started\r\n");
+
+  /* Reset the flash device. */
+  cmd.cfg = WSPI_CFG_CMD_MODE_ONE_LINE |
+            WSPI_CFG_ADDR_MODE_NONE |
+            WSPI_CFG_DATA_MODE_NONE;
+  cmd.cmd = QSPI_FLASH_CMD_ENABLE_RESET;
+  cmd.addr = 0U;
+  cmd.alt = 0U;
+  cmd.dummy = 0U;
+  wspiCommand(&WSPID1, &cmd);
+
+  cmd.cmd = QSPI_FLASH_CMD_RESET_DEVICE;
+  wspiCommand(&WSPID1, &cmd);
+
+  chThdSleepMilliseconds(10);
+
+  /* Read JEDEC ID (1-line mode). */
+  {
+    uint8_t id_buf[3] = {0, 0, 0};
+
+    cmd.cfg = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_NONE |
+              WSPI_CFG_DATA_MODE_ONE_LINE;
+    cmd.cmd = QSPI_FLASH_CMD_JEDEC_ID;
+    cmd.addr = 0U;
+    cmd.alt = 0U;
+    cmd.dummy = 0U;
+    wspiReceive(&WSPID1, &cmd, 3, id_buf);
+
+    chprintf((BaseSequentialStream *)&SD1,
+             "WSPI: JEDEC ID = %02x %02x %02x\r\n",
+             id_buf[0], id_buf[1], id_buf[2]);
+  }
+
+  /* Read status register 1. */
+  {
+    uint8_t sr1 = 0;
+
+    cmd.cfg = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_NONE |
+              WSPI_CFG_DATA_MODE_ONE_LINE;
+    cmd.cmd = QSPI_FLASH_CMD_READ_SR1;
+    cmd.addr = 0U;
+    cmd.alt = 0U;
+    cmd.dummy = 0U;
+    wspiReceive(&WSPID1, &cmd, 1, &sr1);
+
+    chprintf((BaseSequentialStream *)&SD1,
+             "WSPI: SR1 = 0x%02x\r\n", sr1);
+  }
+
+  /* Read data using fast read command (1-line). */
+  {
+    uint8_t read_buf[16];
+    uint32_t i;
+
+    memset(read_buf, 0, sizeof(read_buf));
+
+    cmd.cfg = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_ONE_LINE |
+              WSPI_CFG_DATA_MODE_ONE_LINE;
+    cmd.cmd = QSPI_FLASH_CMD_FAST_READ;
+    cmd.addr = 0x00000000U;
+    cmd.alt = 0U;
+    cmd.dummy = 8U;
+    wspiReceive(&WSPID1, &cmd, sizeof(read_buf), read_buf);
+
+    chprintf((BaseSequentialStream *)&SD1, "WSPI: Read from 0x00: ");
+    for (i = 0; i < sizeof(read_buf); i++) {
+      chprintf((BaseSequentialStream *)&SD1, "%02x ", read_buf[i]);
+    }
+    chprintf((BaseSequentialStream *)&SD1, "\r\n");
+  }
+
+  /* Read data using fast read quad I/O command (4-line). */
+  {
+    uint8_t quad_buf[16];
+    uint32_t i;
+
+    memset(quad_buf, 0, sizeof(quad_buf));
+
+    cmd.cfg = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_FOUR_LINES |
+              WSPI_CFG_DATA_MODE_FOUR_LINES;
+    cmd.cmd = QSPI_FLASH_CMD_FAST_READ_QUAD;
+    cmd.addr = 0x00000000U;
+    cmd.alt = 0U;
+    cmd.dummy = 6U;
+    wspiReceive(&WSPID1, &cmd, sizeof(quad_buf), quad_buf);
+
+    chprintf((BaseSequentialStream *)&SD1, "WSPI: Quad read from 0x00: ");
+    for (i = 0; i < sizeof(quad_buf); i++) {
+      chprintf((BaseSequentialStream *)&SD1, "%02x ", quad_buf[i]);
+    }
+    chprintf((BaseSequentialStream *)&SD1, "\r\n");
+  }
+
+  /* Toggle LED on success. */
+  palTogglePad(GPIOD, GPIO_PIN4);
+
+  chprintf((BaseSequentialStream *)&SD1, "WSPI: Test complete\r\n");
+
+  while (true) {
+    chThdSleepMilliseconds(1000);
+  }
+}
+
+/*===========================================================================*/
 /* RTC driver test thread.                                                   */
 /*===========================================================================*/
 
@@ -1624,6 +1793,8 @@ int main(void)
     chThdCreateStatic(waSDCThread, sizeof(waSDCThread),
                       NORMALPRIO - 1, SDCThread, NULL);
 #endif
+    chThdCreateStatic(waWSPIThread, sizeof(waWSPIThread),
+                      NORMALPRIO + 1, WSPIThread, NULL);
 
     /*
      * Normal main() thread activity, in this demo it does nothing except

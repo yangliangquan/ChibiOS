@@ -303,4 +303,9 @@
 #define CH32_OTG_USE_USB1                  TRUE
 #define CH32_USB_OTG1_IRQ_PRIORITY         14
 
+/*
+ * WSPI (QSPI) driver system settings.
+ */
+#define CH32_WSPI_USE_WSPI1               TRUE
+
 #endif /* MCUCONF_H */
