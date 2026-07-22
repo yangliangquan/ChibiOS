@@ -29,7 +29,7 @@
 #ifndef CHCORE_H
 #define CHCORE_H
 
-/* Inclusion of the RISC-V V3F implementation specific parameters.*/
+/* Inclusion of the RISC-V V5F implementation specific parameters.*/
 #include "riscvparams.h"
 
 /*===========================================================================*/
@@ -910,9 +910,12 @@ static __attribute__((always_inline)) inline void _port_irq_epilogue(void)
     if (chSchIsPreemptionRequired())
     {
         port_lock();
+        __dbg_check_lock();
         chSchDoPreemption();
+        __dbg_check_unlock();
         port_unlock();
     }
+
     recover_context_irq();
 
     __asm volatile("mret");
