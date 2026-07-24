@@ -28,7 +28,7 @@
 #ifndef RISCVPARAMS_H
 #define RISCVPARAMS_H
 
-#include "ch32h417.h"
+#define HARDWARE_STACK
 
 #endif /* CMPARAMS_H */
 

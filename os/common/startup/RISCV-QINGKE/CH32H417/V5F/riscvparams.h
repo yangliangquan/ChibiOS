@@ -10,6 +10,7 @@
 #define RISCVPARAMS_H
 
 /* TODO: Include V5F-specific chip header if different from V3F */
-#include "ch32h417.h"
+
+#define HARDWARE_STACK
 
 #endif /* RISCVPARAMS_H */

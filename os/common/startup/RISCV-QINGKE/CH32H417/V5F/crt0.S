@@ -8,6 +8,8 @@
 /* Module constants.                                                         */
 /*===========================================================================*/
 
+#include "riscvparams.h"
+
 #if !defined(FALSE) || defined(__DOXYGEN__)
 #define FALSE                               0
 #endif
@@ -83,6 +85,12 @@ _start:
     li t0, 0x88
     csrc 0x800, t0
     fence.i
+
+#ifdef HARDWARE_STACK
+    li t0, 0x07
+    csrw 0x804, t0
+    fence.i
+#endif
     
     la a0, _loadcode_lma
     la a1, _loadcode_vma_start

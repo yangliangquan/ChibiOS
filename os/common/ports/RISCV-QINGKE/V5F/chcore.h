@@ -181,8 +181,6 @@ struct port_extctx
     uint32_t x5;      /* t0 */
     uint32_t x6;      /* t1 */
     uint32_t x7;      /* t2 */
-    uint32_t x8;      /* s0/fp */
-    uint32_t x9;      /* s1 */
     uint32_t x10;     /* a0 */
     uint32_t x11;     /* a1 */
     uint32_t x12;     /* a2 */
@@ -191,16 +189,6 @@ struct port_extctx
     uint32_t x15;     /* a5 */
     uint32_t x16;     /* a6 */
     uint32_t x17;     /* a7 */
-    uint32_t x18;     /* s2 */
-    uint32_t x19;     /* s3 */
-    uint32_t x20;     /* s4 */
-    uint32_t x21;     /* s5 */
-    uint32_t x22;     /* s6 */
-    uint32_t x23;     /* s7 */
-    uint32_t x24;     /* s8 */
-    uint32_t x25;     /* s9 */
-    uint32_t x26;     /* s10 */
-    uint32_t x27;     /* s11 */
     uint32_t x28;     /* t3 */
     uint32_t x29;     /* t4 */
     uint32_t x30;     /* t5 */
@@ -214,8 +202,6 @@ struct port_extctx
     float f5;         /* ft5 */
     float f6;         /* ft6 */
     float f7;         /* ft7 */
-    float f8;         /* fs0 */
-    float f9;         /* fs1 */
     float f10;        /* fa0 */
     float f11;        /* fa1 */
     float f12;        /* fa2 */
@@ -224,16 +210,6 @@ struct port_extctx
     float f15;        /* fa5 */
     float f16;        /* fa6 */
     float f17;        /* fa7 */
-    float f18;        /* fs2 */
-    float f19;        /* fs3 */
-    float f20;        /* fs4 */
-    float f21;        /* fs5 */
-    float f22;        /* fs6 */
-    float f23;        /* fs7 */
-    float f24;        /* fs8 */
-    float f25;        /* fs9 */
-    float f26;        /* fs10 */
-    float f27;        /* fs11 */
     float f28;        /* ft8 */
     float f29;        /* ft9 */
     float f30;        /* ft10 */
@@ -760,8 +736,6 @@ static __attribute__((always_inline)) inline void save_context_irq(void)
     STORE_REGISTER(5, offsetof(struct port_extctx, x5));
     STORE_REGISTER(6, offsetof(struct port_extctx, x6));
     STORE_REGISTER(7, offsetof(struct port_extctx, x7));
-    STORE_REGISTER(8, offsetof(struct port_extctx, x8));
-    STORE_REGISTER(9, offsetof(struct port_extctx, x9));
     STORE_REGISTER(10, offsetof(struct port_extctx, x10));
     STORE_REGISTER(11, offsetof(struct port_extctx, x11));
     STORE_REGISTER(12, offsetof(struct port_extctx, x12));
@@ -770,16 +744,6 @@ static __attribute__((always_inline)) inline void save_context_irq(void)
     STORE_REGISTER(15, offsetof(struct port_extctx, x15));
     STORE_REGISTER(16, offsetof(struct port_extctx, x16));
     STORE_REGISTER(17, offsetof(struct port_extctx, x17));
-    STORE_REGISTER(18, offsetof(struct port_extctx, x18));
-    STORE_REGISTER(19, offsetof(struct port_extctx, x19));
-    STORE_REGISTER(20, offsetof(struct port_extctx, x20));
-    STORE_REGISTER(21, offsetof(struct port_extctx, x21));
-    STORE_REGISTER(22, offsetof(struct port_extctx, x22));
-    STORE_REGISTER(23, offsetof(struct port_extctx, x23));
-    STORE_REGISTER(24, offsetof(struct port_extctx, x24));
-    STORE_REGISTER(25, offsetof(struct port_extctx, x25));
-    STORE_REGISTER(26, offsetof(struct port_extctx, x26));
-    STORE_REGISTER(27, offsetof(struct port_extctx, x27));
     STORE_REGISTER(28, offsetof(struct port_extctx, x28));
     STORE_REGISTER(29, offsetof(struct port_extctx, x29));
     STORE_REGISTER(30, offsetof(struct port_extctx, x30));
@@ -793,8 +757,6 @@ static __attribute__((always_inline)) inline void save_context_irq(void)
     STORE_FLOAT_REGISTER(5, offsetof(struct port_extctx, f5));
     STORE_FLOAT_REGISTER(6, offsetof(struct port_extctx, f6));
     STORE_FLOAT_REGISTER(7, offsetof(struct port_extctx, f7));
-    STORE_FLOAT_REGISTER(8, offsetof(struct port_extctx, f8));
-    STORE_FLOAT_REGISTER(9, offsetof(struct port_extctx, f9));
     STORE_FLOAT_REGISTER(10, offsetof(struct port_extctx, f10));
     STORE_FLOAT_REGISTER(11, offsetof(struct port_extctx, f11));
     STORE_FLOAT_REGISTER(12, offsetof(struct port_extctx, f12));
@@ -803,16 +765,6 @@ static __attribute__((always_inline)) inline void save_context_irq(void)
     STORE_FLOAT_REGISTER(15, offsetof(struct port_extctx, f15));
     STORE_FLOAT_REGISTER(16, offsetof(struct port_extctx, f16));
     STORE_FLOAT_REGISTER(17, offsetof(struct port_extctx, f17));
-    STORE_FLOAT_REGISTER(18, offsetof(struct port_extctx, f18));
-    STORE_FLOAT_REGISTER(19, offsetof(struct port_extctx, f19));
-    STORE_FLOAT_REGISTER(20, offsetof(struct port_extctx, f20));
-    STORE_FLOAT_REGISTER(21, offsetof(struct port_extctx, f21));
-    STORE_FLOAT_REGISTER(22, offsetof(struct port_extctx, f22));
-    STORE_FLOAT_REGISTER(23, offsetof(struct port_extctx, f23));
-    STORE_FLOAT_REGISTER(24, offsetof(struct port_extctx, f24));
-    STORE_FLOAT_REGISTER(25, offsetof(struct port_extctx, f25));
-    STORE_FLOAT_REGISTER(26, offsetof(struct port_extctx, f26));
-    STORE_FLOAT_REGISTER(27, offsetof(struct port_extctx, f27));
     STORE_FLOAT_REGISTER(28, offsetof(struct port_extctx, f28));
     STORE_FLOAT_REGISTER(29, offsetof(struct port_extctx, f29));
     STORE_FLOAT_REGISTER(30, offsetof(struct port_extctx, f30));
@@ -826,8 +778,6 @@ static __attribute__((always_inline)) inline void recover_context_irq(void)
     LOAD_REGISTER(5, offsetof(struct port_extctx, x5));
     LOAD_REGISTER(6, offsetof(struct port_extctx, x6));
     LOAD_REGISTER(7, offsetof(struct port_extctx, x7));
-    LOAD_REGISTER(8, offsetof(struct port_extctx, x8));
-    LOAD_REGISTER(9, offsetof(struct port_extctx, x9));
     LOAD_REGISTER(10, offsetof(struct port_extctx, x10));
     LOAD_REGISTER(11, offsetof(struct port_extctx, x11));
     LOAD_REGISTER(12, offsetof(struct port_extctx, x12));
@@ -836,16 +786,6 @@ static __attribute__((always_inline)) inline void recover_context_irq(void)
     LOAD_REGISTER(15, offsetof(struct port_extctx, x15));
     LOAD_REGISTER(16, offsetof(struct port_extctx, x16));
     LOAD_REGISTER(17, offsetof(struct port_extctx, x17));
-    LOAD_REGISTER(18, offsetof(struct port_extctx, x18));
-    LOAD_REGISTER(19, offsetof(struct port_extctx, x19));
-    LOAD_REGISTER(20, offsetof(struct port_extctx, x20));
-    LOAD_REGISTER(21, offsetof(struct port_extctx, x21));
-    LOAD_REGISTER(22, offsetof(struct port_extctx, x22));
-    LOAD_REGISTER(23, offsetof(struct port_extctx, x23));
-    LOAD_REGISTER(24, offsetof(struct port_extctx, x24));
-    LOAD_REGISTER(25, offsetof(struct port_extctx, x25));
-    LOAD_REGISTER(26, offsetof(struct port_extctx, x26));
-    LOAD_REGISTER(27, offsetof(struct port_extctx, x27));
     LOAD_REGISTER(28, offsetof(struct port_extctx, x28));
     LOAD_REGISTER(29, offsetof(struct port_extctx, x29));
     LOAD_REGISTER(30, offsetof(struct port_extctx, x30));
@@ -859,8 +799,6 @@ static __attribute__((always_inline)) inline void recover_context_irq(void)
     LOAD_FLOAT_REGISTER(5, offsetof(struct port_extctx, f5));
     LOAD_FLOAT_REGISTER(6, offsetof(struct port_extctx, f6));
     LOAD_FLOAT_REGISTER(7, offsetof(struct port_extctx, f7));
-    LOAD_FLOAT_REGISTER(8, offsetof(struct port_extctx, f8));
-    LOAD_FLOAT_REGISTER(9, offsetof(struct port_extctx, f9));
     LOAD_FLOAT_REGISTER(10, offsetof(struct port_extctx, f10));
     LOAD_FLOAT_REGISTER(11, offsetof(struct port_extctx, f11));
     LOAD_FLOAT_REGISTER(12, offsetof(struct port_extctx, f12));
@@ -869,16 +807,6 @@ static __attribute__((always_inline)) inline void recover_context_irq(void)
     LOAD_FLOAT_REGISTER(15, offsetof(struct port_extctx, f15));
     LOAD_FLOAT_REGISTER(16, offsetof(struct port_extctx, f16));
     LOAD_FLOAT_REGISTER(17, offsetof(struct port_extctx, f17));
-    LOAD_FLOAT_REGISTER(18, offsetof(struct port_extctx, f18));
-    LOAD_FLOAT_REGISTER(19, offsetof(struct port_extctx, f19));
-    LOAD_FLOAT_REGISTER(20, offsetof(struct port_extctx, f20));
-    LOAD_FLOAT_REGISTER(21, offsetof(struct port_extctx, f21));
-    LOAD_FLOAT_REGISTER(22, offsetof(struct port_extctx, f22));
-    LOAD_FLOAT_REGISTER(23, offsetof(struct port_extctx, f23));
-    LOAD_FLOAT_REGISTER(24, offsetof(struct port_extctx, f24));
-    LOAD_FLOAT_REGISTER(25, offsetof(struct port_extctx, f25));
-    LOAD_FLOAT_REGISTER(26, offsetof(struct port_extctx, f26));
-    LOAD_FLOAT_REGISTER(27, offsetof(struct port_extctx, f27));
     LOAD_FLOAT_REGISTER(28, offsetof(struct port_extctx, f28));
     LOAD_FLOAT_REGISTER(29, offsetof(struct port_extctx, f29));
     LOAD_FLOAT_REGISTER(30, offsetof(struct port_extctx, f30));
@@ -889,7 +817,9 @@ static __attribute__((always_inline)) inline void recover_context_irq(void)
 
 static __attribute__((always_inline)) inline void _port_irq_prologue(void)
 {
+#ifdef HARDWARE_STACK
     save_context_irq();
+#endif
 }
 
 /* Forward declarations for kernel functions used by _port_irq_epilogue.
@@ -915,8 +845,9 @@ static __attribute__((always_inline)) inline void _port_irq_epilogue(void)
         __dbg_check_unlock();
         port_unlock();
     }
-
+#ifdef HARDWARE_STACK
     recover_context_irq();
+#endif
 
     __asm volatile("mret");
 }

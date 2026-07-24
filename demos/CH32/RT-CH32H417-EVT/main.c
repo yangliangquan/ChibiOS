@@ -1732,7 +1732,7 @@ static const ShellConfig shell_cfg = {
   commands                      
 };
 
-#define SHELL_WA_SIZE THD_WORKING_AREA_SIZE(2048)
+#define SHELL_WA_SIZE THD_WORKING_AREA_SIZE(4096)
 
 /*
  * Application entry point.
@@ -1762,39 +1762,39 @@ int main(void)
      * after a reset.
      */
     usbDisconnectBus(serusbcfg.usbp);
-    // chThdSleepMilliseconds(1500);
+    chThdSleepMilliseconds(1500);
     usbStart(serusbcfg.usbp, &usbcfg);
     usbConnectBus(serusbcfg.usbp);
 
     /*
      * Creates the example thread.
      */
-    chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
+    // chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO, Thread1, NULL);
     // chThdCreateStatic(waADCThread, sizeof(waADCThread), NORMALPRIO, ADCThread, NULL);
     // chThdCreateStatic(waGPTThread, sizeof(waGPTThread), NORMALPRIO, GPTThread, NULL);
     // chThdCreateStatic(waPWMThread, sizeof(waPWMThread), NORMALPRIO, PWMThread, NULL);
     // chThdCreateStatic(waICUThread, sizeof(waICUThread), NORMALPRIO, ICUThread, NULL);
     // chThdCreateStatic(waSIOThread, sizeof(waSIOThread), NORMALPRIO, SIOThread, NULL);
-    chThdCreateStatic(waSerialThread, sizeof(waSerialThread), NORMALPRIO, SerialThread, NULL);
+    // chThdCreateStatic(waSerialThread, sizeof(waSerialThread), NORMALPRIO, SerialThread, NULL);
     // chThdCreateStatic(waUARTThread, sizeof(waUARTThread), NORMALPRIO, UARTThread, NULL);
     // chThdCreateStatic(waSPIThread, sizeof(waSPIThread), NORMALPRIO, SPIThread, NULL);
     // chThdCreateStatic(waI2CThread, sizeof(waI2CThread), NORMALPRIO, I2CThread, NULL);
     // chThdCreateStatic(waI2SThread, sizeof(waI2SThread), NORMALPRIO, I2SThread, NULL);
     // chThdCreateStatic(waDACThread, sizeof(waDACThread), NORMALPRIO, DACThread, NULL);
     // chThdCreateStatic(waCANThread, sizeof(waCANThread), NORMALPRIO, CANThread, NULL);
-    chThdCreateStatic(waRTCThread, sizeof(waRTCThread), NORMALPRIO, RTCThread, NULL);
-#if CH32_DEMO_USE_SDIO
-    chThdCreateStatic(waSDIOThread, sizeof(waSDIOThread),
-                      NORMALPRIO - 1, SDIOThread, NULL);
-#elif CH32_DEMO_USE_FATFS
-    chThdCreateStatic(waFatFSThread, sizeof(waFatFSThread),
-                      NORMALPRIO - 1, FatFSThread, NULL);
-#else
-    chThdCreateStatic(waSDCThread, sizeof(waSDCThread),
-                      NORMALPRIO - 1, SDCThread, NULL);
-#endif
-    chThdCreateStatic(waWSPIThread, sizeof(waWSPIThread),
-                      NORMALPRIO + 1, WSPIThread, NULL);
+    // chThdCreateStatic(waRTCThread, sizeof(waRTCThread), NORMALPRIO, RTCThread, NULL);
+// #if CH32_DEMO_USE_SDIO
+//     chThdCreateStatic(waSDIOThread, sizeof(waSDIOThread),
+//                       NORMALPRIO - 1, SDIOThread, NULL);
+// #elif CH32_DEMO_USE_FATFS
+//     chThdCreateStatic(waFatFSThread, sizeof(waFatFSThread),
+//                       NORMALPRIO - 1, FatFSThread, NULL);
+// #else
+//     chThdCreateStatic(waSDCThread, sizeof(waSDCThread),
+//                       NORMALPRIO - 1, SDCThread, NULL);
+// #endif
+    // chThdCreateStatic(waWSPIThread, sizeof(waWSPIThread),
+    //                   NORMALPRIO + 1, WSPIThread, NULL);
 
     /*
      * Normal main() thread activity, in this demo it does nothing except
@@ -1808,6 +1808,10 @@ int main(void)
                 chThdCreateFromHeap(NULL, SHELL_WA_SIZE, "shell", NORMALPRIO + 1, shellThread, (void *)&shell_cfg);
             chThdWait(shelltp); /* Waiting termination.             */
         }
+        // if(SDU1.config->usbp->state == USB_ACTIVE){
+        //   chprintf((BaseSequentialStream *)&SDU1, "Hello from ChibiOS!\r\n");
+        // }
+
         chThdSleepMilliseconds(500);
     }
 }
