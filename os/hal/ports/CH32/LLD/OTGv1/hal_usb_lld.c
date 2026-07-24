@@ -24,6 +24,8 @@
 
 #include "hal.h"
 
+#include "string.h"
+
 #if (HAL_USE_USB == TRUE) || defined(__DOXYGEN__)
 
 /*===========================================================================*/
@@ -64,7 +66,9 @@ static union {
 /**
  * @brief   Buffer for the EP0 setup packets.
  */
-static uint8_t ep0setup_buffer[64];
+static ALIGNED_VAR(4) uint8_t ep0setup_buffer[64];
+
+static ALIGNED_VAR(4) uint8_t ep_txdma_bouncebuffer[USB_MAX_ENDPOINTS][64];
 
 /**
  * @brief   EP0 initialization structure.
@@ -95,41 +99,47 @@ static const USBEndpointConfig ep0config = {
 static void usb_serve_endpoints(USBDriver *usbp, uint8_t intst)
 {
   (void)usbp;
-  uint8_t ep = intst & USBFS_UIS_ENDP_MASK;
-  uint8_t token = intst & USBFS_UIS_TOKEN_MASK;
+  volatile uint8_t ep = intst & USBFS_UIS_ENDP_MASK;
+  volatile uint8_t token = intst & USBFS_UIS_TOKEN_MASK;
   volatile uint16_t *rxlen_reg = NULL;
   volatile uint8_t *txctlr_reg = NULL;
   volatile uint8_t *rxctlr_reg = NULL;
   volatile uint32_t *dma_reg = NULL;
-  volatile uint16_t *txlen_reg = NULL;
+  volatile uint8_t *txlen_reg = NULL;
+
+  if(token == USBFS_UIS_TOKEN_SETUP){
+    ep = 0;
+  }
+
+  ep &= 0x7;
 
   /* Map registers for the endpoint */
   switch (ep)
   {
   case 0:
     dma_reg   = &(CH32_USBFS_DEVICE->UEP0_DMA);
-    txlen_reg = (volatile uint16_t *)&(CH32_USBFS_DEVICE->UEP0_TX_LEN);
+    txlen_reg = &(CH32_USBFS_DEVICE->UEP0_TX_LEN);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP0_TX_CTRL);
     rxctlr_reg = &(CH32_USBFS_DEVICE->UEP0_RX_CTRL);
     rxlen_reg  = &(CH32_USBFS_DEVICE->RX_LEN);
     break;
   case 1:
     dma_reg   = &(CH32_USBFS_DEVICE->UEP1_DMA);
-    txlen_reg = (volatile uint16_t *)&(CH32_USBFS_DEVICE->UEP1_TX_LEN);
+    txlen_reg = &(CH32_USBFS_DEVICE->UEP1_TX_LEN);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP1_TX_CTRL);
     rxctlr_reg = &(CH32_USBFS_DEVICE->UEP1_RX_CTRL);
     rxlen_reg  = &(CH32_USBFS_DEVICE->RX_LEN);
     break;
   case 2:
     dma_reg   = &(CH32_USBFS_DEVICE->UEP2_DMA);
-    txlen_reg = (volatile uint16_t *)&(CH32_USBFS_DEVICE->UEP2_TX_LEN);
+    txlen_reg = &(CH32_USBFS_DEVICE->UEP2_TX_LEN);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP2_TX_CTRL);
     rxctlr_reg = &(CH32_USBFS_DEVICE->UEP2_RX_CTRL);
     rxlen_reg  = &(CH32_USBFS_DEVICE->RX_LEN);
     break;
   case 3:
     dma_reg   = &(CH32_USBFS_DEVICE->UEP3_DMA);
-    txlen_reg = (volatile uint16_t *)&(CH32_USBFS_DEVICE->UEP3_TX_LEN);
+    txlen_reg = &(CH32_USBFS_DEVICE->UEP3_TX_LEN);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP3_TX_CTRL);
     rxctlr_reg = &(CH32_USBFS_DEVICE->UEP3_RX_CTRL);
     rxlen_reg  = &(CH32_USBFS_DEVICE->RX_LEN);
@@ -170,9 +180,21 @@ static void usb_serve_endpoints(USBDriver *usbp, uint8_t intst)
       iesp->txlast = (remaining < usbp->epc[ep]->in_maxsize) ?
                       remaining : usbp->epc[ep]->in_maxsize;
 
-      *dma_reg = (uint32_t)(iesp->txbuf + iesp->txcnt);
+      //When the address is not 4-byte aligned
+      //Tx buffer is actually at rigister content + 64
+      if((uint32_t)(iesp->txbuf) & 0x3)
+      {
+        memcpy(ep_txdma_bouncebuffer[ep], iesp->txbuf, iesp->txlast);
+        *dma_reg = (uint32_t)(ep_txdma_bouncebuffer[ep]);
+      }
+      else{
+        *dma_reg = (uint32_t)(iesp->txbuf + iesp->txcnt);
+      }
+
       *txlen_reg = (uint16_t)iesp->txlast;
-      *txctlr_reg ^= USBFS_UEP_T_TOG;
+      if (ep == 0) {
+        *txctlr_reg ^= USBFS_UEP_T_TOG;
+      }
       *txctlr_reg = (*txctlr_reg & ~USBFS_UEP_T_RES_MASK) | USBFS_UEP_T_RES_ACK;
     }
   }
@@ -217,8 +239,10 @@ static void usb_serve_endpoints(USBDriver *usbp, uint8_t intst)
       else
       {
         /* More data to receive */
-        *rxctlr_reg ^= USBFS_UEP_R_TOG;
-        *dma_reg = (uint32_t)oesp->rxbuf;
+        if (ep == 0) {
+          *rxctlr_reg ^= USBFS_UEP_R_TOG;
+        }
+        *dma_reg = (uint32_t)(oesp->rxbuf + oesp->rxcnt);
         *rxctlr_reg = (*rxctlr_reg & ~USBFS_UEP_R_RES_MASK) | USBFS_UEP_R_RES_ACK;
       }
     }
@@ -240,18 +264,18 @@ OSAL_IRQ_HANDLER(USBFS_IRQHandler)
   if (intflag & USBFS_UIF_BUS_RST)
   {
     /* Bus reset */
-    CH32_USBFS_DEVICE->INT_FG = USBFS_UIF_BUS_RST;
     _usb_reset(&USBD1);
+    CH32_USBFS_DEVICE->INT_FG = USBFS_UIF_BUS_RST;
   }
   else if (intflag & USBFS_UIF_SUSPEND)
   {
     /* Suspend */
-    CH32_USBFS_DEVICE->INT_FG = USBFS_UIF_SUSPEND;
     _usb_suspend(&USBD1);
+    CH32_USBFS_DEVICE->INT_FG = USBFS_UIF_SUSPEND;
   }
   else if (intflag & USBFS_UIF_TRANSFER)
   {
-    /* Transfer completed */
+    /* Handle transfer interrupt */
     usb_serve_endpoints(&USBD1, intst);
     CH32_USBFS_DEVICE->INT_FG = USBFS_UIF_TRANSFER;
   }
@@ -349,11 +373,9 @@ void usb_lld_start(USBDriver *usbp)
       /* Software reset the SIE */
       CH32_USBFS_HOST->BASE_CTRL = USBFS_UC_RESET_SIE | USBFS_UC_CLR_ALL;
 
-      /* Small delay for reset */
-      {
-        volatile uint32_t delay = 100000;
-        while (delay) delay--;
-      }
+      osalSysUnlock();
+      osalThreadSleepMilliseconds(50);
+      osalSysLock();
 
       CH32_USBFS_HOST->BASE_CTRL = 0;
 
@@ -363,7 +385,7 @@ void usb_lld_start(USBDriver *usbp)
       /* Enable interrupts: bus reset, suspend, transfer */
       CH32_USBFS_DEVICE->INT_EN = USBFS_UIE_BUS_RST |
                                   USBFS_UIE_SUSPEND |
-                                  USBFS_UIE_TRANSFER;
+                                  USBFS_UIE_TRANSFER ;
 
       /* Configure device mode: pull-up enable, interrupt busy, DMA enable */
       CH32_USBFS_DEVICE->BASE_CTRL = USBFS_UC_DEV_PU_EN |
@@ -375,7 +397,6 @@ void usb_lld_start(USBDriver *usbp)
       /* Enable USB port */
       CH32_USBFS_DEVICE->UDEV_CTRL = USBFS_UD_PD_DIS |
                                      USBFS_UD_PORT_EN;
-
     }
 #endif
   }
@@ -484,42 +505,48 @@ void usb_lld_init_endpoint(USBDriver *usbp, usbep_t ep)
     case 1:
       if (epcp->in_maxsize > 0)
       {
-        CH32_USBFS_DEVICE->UEP4_1_MOD |= USBFS_UEP1_TX_EN;
+        // CH32_USBFS_DEVICE->UEP4_1_MOD |= USBFS_UEP1_TX_EN;
         CH32_USBFS_DEVICE->UEP1_TX_LEN = 0;
-        CH32_USBFS_DEVICE->UEP1_TX_CTRL = USBFS_UEP_T_RES_NAK;
+        CH32_USBFS_DEVICE->UEP1_TX_CTRL = USBFS_UEP_T_AUTO_TOG |
+                                            USBFS_UEP_T_RES_NAK;
       }
       if (epcp->out_maxsize > 0)
       {
-        CH32_USBFS_DEVICE->UEP4_1_MOD |= USBFS_UEP1_RX_EN;
-        CH32_USBFS_DEVICE->UEP1_RX_CTRL = USBFS_UEP_R_RES_NAK;
+        // CH32_USBFS_DEVICE->UEP4_1_MOD |= USBFS_UEP1_RX_EN;
+        CH32_USBFS_DEVICE->UEP1_RX_CTRL = USBFS_UEP_R_AUTO_TOG |
+                                            USBFS_UEP_R_RES_NAK;
       }
       break;
 
     case 2:
       if (epcp->in_maxsize > 0)
       {
-        CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP2_TX_EN;
+        // CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP2_TX_EN;
         CH32_USBFS_DEVICE->UEP2_TX_LEN = 0;
-        CH32_USBFS_DEVICE->UEP2_TX_CTRL = USBFS_UEP_T_RES_NAK;
+        CH32_USBFS_DEVICE->UEP2_TX_CTRL = USBFS_UEP_T_AUTO_TOG |
+                                            USBFS_UEP_T_RES_NAK;
       }
       if (epcp->out_maxsize > 0)
       {
-        CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP2_RX_EN;
-        CH32_USBFS_DEVICE->UEP2_RX_CTRL = USBFS_UEP_R_RES_NAK;
+        // CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP2_RX_EN;
+        CH32_USBFS_DEVICE->UEP2_RX_CTRL = USBFS_UEP_R_AUTO_TOG |
+                                            USBFS_UEP_R_RES_NAK;
       }
       break;
 
     case 3:
       if (epcp->in_maxsize > 0)
       {
-        CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP3_TX_EN;
+        // CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP3_TX_EN;
         CH32_USBFS_DEVICE->UEP3_TX_LEN = 0;
-        CH32_USBFS_DEVICE->UEP3_TX_CTRL = USBFS_UEP_T_RES_NAK;
+        CH32_USBFS_DEVICE->UEP3_TX_CTRL = USBFS_UEP_T_AUTO_TOG |
+                                            USBFS_UEP_T_RES_NAK;
       }
       if (epcp->out_maxsize > 0)
       {
-        CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP3_RX_EN;
-        CH32_USBFS_DEVICE->UEP3_RX_CTRL = USBFS_UEP_R_RES_NAK;
+        // CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP3_RX_EN;
+        CH32_USBFS_DEVICE->UEP3_RX_CTRL = USBFS_UEP_R_AUTO_TOG |
+                                            USBFS_UEP_R_RES_NAK;
       }
       break;
     }
@@ -735,14 +762,20 @@ void usb_lld_start_out(USBDriver *usbp, usbep_t ep)
   case 1:
     dma_reg    = &(CH32_USBFS_DEVICE->UEP1_DMA);
     rxctlr_reg = &(CH32_USBFS_DEVICE->UEP1_RX_CTRL);
+    CH32_USBFS_DEVICE->UEP4_1_MOD |= USBFS_UEP1_RX_EN;
+    CH32_USBFS_DEVICE->UEP4_1_MOD &= ~USBFS_UEP1_TX_EN;
     break;
   case 2:
     dma_reg    = &(CH32_USBFS_DEVICE->UEP2_DMA);
     rxctlr_reg = &(CH32_USBFS_DEVICE->UEP2_RX_CTRL);
+    CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP2_RX_EN;
+    CH32_USBFS_DEVICE->UEP2_3_MOD &= ~USBFS_UEP2_TX_EN;
     break;
   case 3:
     dma_reg    = &(CH32_USBFS_DEVICE->UEP3_DMA);
     rxctlr_reg = &(CH32_USBFS_DEVICE->UEP3_RX_CTRL);
+    CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP3_RX_EN;
+    CH32_USBFS_DEVICE->UEP2_3_MOD &= ~USBFS_UEP4_TX_EN;
     break;
   default:
     return;
@@ -792,32 +825,38 @@ void usb_lld_start_out(USBDriver *usbp, usbep_t ep)
  */
 void usb_lld_start_in(USBDriver *usbp, usbep_t ep)
 {
-  uint8_t ep_num = ep & 0x7F;
+  volatile uint8_t ep_num = ep & 0x7F;
   volatile uint32_t *dma_reg = NULL;
   volatile uint8_t *txctlr_reg = NULL;
-  volatile uint16_t *txlen_reg = NULL;
+  volatile uint8_t *txlen_reg = NULL;
 
   switch (ep_num)
   {
   case 0:
     dma_reg    = &(CH32_USBFS_DEVICE->UEP0_DMA);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP0_TX_CTRL);
-    txlen_reg  = (volatile uint16_t *)&(CH32_USBFS_DEVICE->UEP0_TX_LEN);
+    txlen_reg  = &(CH32_USBFS_DEVICE->UEP0_TX_LEN);
     break;
   case 1:
     dma_reg    = &(CH32_USBFS_DEVICE->UEP1_DMA);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP1_TX_CTRL);
-    txlen_reg  = (volatile uint16_t *)&(CH32_USBFS_DEVICE->UEP1_TX_LEN);
+    txlen_reg  = &(CH32_USBFS_DEVICE->UEP1_TX_LEN);
+    CH32_USBFS_DEVICE->UEP4_1_MOD |= USBFS_UEP1_TX_EN;
+    CH32_USBFS_DEVICE->UEP4_1_MOD &= ~USBFS_UEP1_RX_EN;
     break;
   case 2:
     dma_reg    = &(CH32_USBFS_DEVICE->UEP2_DMA);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP2_TX_CTRL);
-    txlen_reg  = (volatile uint16_t *)&(CH32_USBFS_DEVICE->UEP2_TX_LEN);
+    txlen_reg  = &(CH32_USBFS_DEVICE->UEP2_TX_LEN);
+    CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP2_TX_EN;
+    CH32_USBFS_DEVICE->UEP2_3_MOD &= ~USBFS_UEP2_RX_EN;
     break;
   case 3:
     dma_reg    = &(CH32_USBFS_DEVICE->UEP3_DMA);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP3_TX_CTRL);
-    txlen_reg  = (volatile uint16_t *)&(CH32_USBFS_DEVICE->UEP3_TX_LEN);
+    txlen_reg  = &(CH32_USBFS_DEVICE->UEP3_TX_LEN);
+    CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP3_TX_EN;
+    CH32_USBFS_DEVICE->UEP2_3_MOD &= ~USBFS_UEP3_RX_EN;
     break;
   default:
     return;
@@ -837,8 +876,28 @@ void usb_lld_start_in(USBDriver *usbp, usbep_t ep)
       *txctlr_reg |= USBFS_UEP_T_TOG;
     }
   }
+  else
+  {
+    /* Non-EP0 endpoints: hardware AUTO_TOG manages the toggle.
+       Initial TOG=0 (DATA0 per USB spec) is set in usb_lld_init_endpoint().
+       Do NOT touch TOG here it is updated by AUTO_TOG. */
+  }
+
 
   /* Set DMA address, length, and enable transmission */
+  if(ep_num == 0){
+    *dma_reg = (uint32_t)(isp->txbuf + isp->txcnt);
+  }
+  else{
+    if((uint32_t)(isp->txbuf) & 0x3)
+    {
+      memcpy(ep_txdma_bouncebuffer[ep_num], isp->txbuf, isp->txlast);
+      *dma_reg = (uint32_t)(ep_txdma_bouncebuffer[ep_num]);
+    }
+    else{
+      *dma_reg = (uint32_t)(isp->txbuf + isp->txcnt);
+    }
+  }
   *dma_reg = (uint32_t)(isp->txbuf + isp->txcnt);
   *txlen_reg = (uint16_t)isp->txlast;
   *txctlr_reg = (*txctlr_reg & ~USBFS_UEP_T_RES_MASK) | USBFS_UEP_T_RES_ACK;
@@ -943,8 +1002,8 @@ void usb_lld_clear_out(USBDriver *usbp, usbep_t ep)
     return;
   }
 
-  /* Clear the response bits (remove ACK/STALL/NAK) */
-  *rxctlr_reg &= ~USBFS_UEP_R_RES_MASK;
+  /* Set NAK �? clearing the response bits to 00 would equal ACK. */
+  *rxctlr_reg = (*rxctlr_reg & ~USBFS_UEP_R_RES_MASK) | USBFS_UEP_R_RES_NAK;
 }
 
 /**
@@ -978,8 +1037,8 @@ void usb_lld_clear_in(USBDriver *usbp, usbep_t ep)
     return;
   }
 
-  /* Clear the response bits (remove ACK/STALL/NAK) */
-  *txctlr_reg &= ~USBFS_UEP_T_RES_MASK;
+  /* Set NAK �? clearing the response bits to 00 would equal ACK. */
+  *txctlr_reg = (*txctlr_reg & ~USBFS_UEP_T_RES_MASK) | USBFS_UEP_T_RES_NAK;
 }
 
 #endif /* HAL_USE_USB == TRUE */

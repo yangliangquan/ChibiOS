@@ -19,12 +19,50 @@
 /* Virtual serial port over USB.*/
 SerialUSBDriver SDU1;
 
+#if CH32_OTG_USE_USB1 == TRUE
+/*
+ * SOF substitute timer.
+ * @note The CH32 USBFS controller does not generate SOF interrupts
+ *       in device mode. A 1ms virtual timer is used instead to periodically
+ *       flush partially-filled output buffers via sduSOFHookI().
+ */
+static virtual_timer_t sofvtt;
+
+/*
+ * SOF substitute timer callback. Called every 1ms.
+ */
+static void sofvtt_cb(void *arg) {
+
+  (void)arg;
+
+  osalSysLockFromISR();
+  sduSOFHookI(&SDU1);
+  osalSysUnlockFromISR();
+
+  /* Re-arm the one-shot timer for the next period. */
+  osalSysLockFromISR();
+  chVTResetI(&sofvtt);
+  chVTSetI(&sofvtt, TIME_MS2I(1), sofvtt_cb, NULL);
+  osalSysUnlockFromISR();
+}
+#endif /* CH32_OTG_USE_USB1 == TRUE */
+
 /*
  * Endpoints to be used for USBD1.
+ * CH32 USBFS (OTGv1) has shared UEPn_DMA per endpoint, so TX and RX
+ * must use separate endpoint numbers to avoid register conflicts.
+ * USBHS (non-OTG) has separate TX/RX DMA registers, so TX and RX
+ * can share the same endpoint number.
  */
+#if CH32_OTG_USE_USB1 == TRUE
+#define USBD1_DATA_REQUEST_EP           2
+#define USBD1_DATA_AVAILABLE_EP         1
+#define USBD1_INTERRUPT_REQUEST_EP      3
+#else
 #define USBD1_DATA_REQUEST_EP           1
 #define USBD1_DATA_AVAILABLE_EP         1
 #define USBD1_INTERRUPT_REQUEST_EP      2
+#endif
 
 /*
  * USB Device Descriptor.
@@ -101,7 +139,7 @@ static const uint8_t vcom_configuration_descriptor_data[67] = {
                                            Class Interface).                */
   USB_DESC_BYTE         (0x01),         /* bSlaveInterface0 (Data Class
                                            Interface).                      */
-  /* Endpoint 2 Descriptor.*/
+  /* Endpoint 3 Descriptor.*/
   USB_DESC_ENDPOINT     (USBD1_INTERRUPT_REQUEST_EP|0x80,
                          0x03,          /* bmAttributes (Interrupt).        */
                          0x0008,        /* wMaxPacketSize.                  */
@@ -117,12 +155,12 @@ static const uint8_t vcom_configuration_descriptor_data[67] = {
                          0x00,          /* bInterfaceProtocol (CDC section
                                            4.7).                            */
                          0x00),         /* iInterface.                      */
-  /* Endpoint 3 Descriptor.*/
+  /* Endpoint 1 Descriptor.*/
   USB_DESC_ENDPOINT     (USBD1_DATA_AVAILABLE_EP,       /* bEndpointAddress.*/
                          0x02,          /* bmAttributes (Bulk).             */
                          0x0040,        /* wMaxPacketSize.                  */
                          0x00),         /* bInterval.                       */
-  /* Endpoint 1 Descriptor.*/
+  /* Endpoint 2 Descriptor.*/
   USB_DESC_ENDPOINT     (USBD1_DATA_REQUEST_EP|0x80,    /* bEndpointAddress.*/
                          0x02,          /* bmAttributes (Bulk).             */
                          0x0040,        /* wMaxPacketSize.                  */
@@ -231,6 +269,73 @@ static const USBDescriptor *get_descriptor(USBDriver *usbp,
   return NULL;
 }
 
+#if CH32_OTG_USE_USB1 == TRUE
+/*
+ * OTGv1: shared DMA per endpoint, use separate endpoints for TX and RX.
+ */
+
+/**
+ * @brief   OUT EP1 state (bulk RX).
+ */
+static USBOutEndpointState ep1outstate;
+
+/**
+ * @brief   EP1 initialization structure (OUT only, bulk RX).
+ */
+static const USBEndpointConfig ep1config = {
+  USB_EP_MODE_TYPE_BULK,
+  NULL,
+  NULL,
+  sduDataReceived,
+  0x0000,
+  0x0040,
+  NULL,
+  &ep1outstate,
+};
+
+/**
+ * @brief   IN EP2 state (bulk TX).
+ */
+static USBInEndpointState ep2instate;
+
+/**
+ * @brief   EP2 initialization structure (IN only, bulk TX).
+ */
+static const USBEndpointConfig ep2config = {
+  USB_EP_MODE_TYPE_BULK,
+  NULL,
+  sduDataTransmitted,
+  NULL,
+  0x0040,
+  0x0000,
+  &ep2instate,
+  NULL,
+};
+
+/**
+ * @brief   IN EP3 state (interrupt).
+ */
+static USBInEndpointState ep3instate;
+
+/**
+ * @brief   EP3 initialization structure (IN only, interrupt).
+ */
+static const USBEndpointConfig ep3config = {
+  USB_EP_MODE_TYPE_INTR,
+  NULL,
+  sduInterruptTransmitted,
+  NULL,
+  0x0010,
+  0x0000,
+  &ep3instate,
+  NULL,
+};
+#else
+/*
+ * Non-OTG (USBHS): separate TX/RX DMA registers, TX and RX can share
+ * the same endpoint number.
+ */
+
 /**
  * @brief   IN EP1 state.
  */
@@ -273,6 +378,7 @@ static const USBEndpointConfig ep2config = {
   &ep2instate,
   NULL,
 };
+#endif
 
 /*
  * Handles the USB driver global events.
@@ -290,11 +396,25 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
        Note, this callback is invoked from an ISR so I-Class functions
        must be used.*/
 
+#if CH32_OTG_USE_USB1 == TRUE
+    /* OTGv1: separate endpoints for TX and RX. */
+    usbInitEndpointI(usbp, USBD1_DATA_AVAILABLE_EP, &ep1config);
+    usbInitEndpointI(usbp, USBD1_DATA_REQUEST_EP, &ep2config);
+    usbInitEndpointI(usbp, USBD1_INTERRUPT_REQUEST_EP, &ep3config);
+#else
+    /* Non-OTG (USBHS): TX and RX share the same endpoint. */
     usbInitEndpointI(usbp, USBD1_DATA_REQUEST_EP, &ep1config);
     usbInitEndpointI(usbp, USBD1_INTERRUPT_REQUEST_EP, &ep2config);
+#endif
 
     /* Resetting the state of the CDC subsystem.*/
     sduConfigureHookI(&SDU1);
+
+#if CH32_OTG_USE_USB1 == TRUE
+    /* Start the SOF substitute timer. */
+    chVTResetI(&sofvtt);
+    chVTSetI(&sofvtt, TIME_MS2I(1), sofvtt_cb, NULL);
+#endif
 
     chSysUnlockFromISR();
     return;
@@ -304,6 +424,11 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
     /* Falls into.*/
   case USB_EVENT_SUSPEND:
     chSysLockFromISR();
+
+#if CH32_OTG_USE_USB1 == TRUE
+    /* Stop the SOF substitute timer. */
+    chVTResetI(&sofvtt);
+#endif
 
     /* Disconnection event on suspend.*/
     sduSuspendHookI(&SDU1);
@@ -324,8 +449,9 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
   return;
 }
 
+#if CH32_OTG_USE_USB1 != TRUE
 /*
- * Handles the USB driver global events.
+ * SOF handler for USB controllers that support SOF interrupts.
  */
 static void sof_handler(USBDriver *usbp) {
 
@@ -335,6 +461,7 @@ static void sof_handler(USBDriver *usbp) {
   sduSOFHookI(&SDU1);
   osalSysUnlockFromISR();
 }
+#endif /* CH32_OTG_USE_USB1 != TRUE */
 
 /*
  * Custom requests hook for CDC-ACM.
@@ -368,7 +495,11 @@ const USBConfig usbcfg = {
   usb_event,
   get_descriptor,
   cdc_requests_hook,
-  sof_handler
+#if CH32_OTG_USE_USB1 == TRUE
+  NULL              /* CH32 USBFS: no SOF, use virtual timer instead. */
+#else
+  sof_handler        /* Use hardware SOF interrupt. */
+#endif
 };
 
 /*
