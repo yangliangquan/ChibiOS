@@ -16,7 +16,7 @@
 
 /**
  * @file    SDIOv1/hal_sdc_lld.h
- * @brief   CH32 SDC subsystem low level driver header (SDIO peripheral).
+ * @brief   CH32 SDC subsystem low level driver header.
  *
  * @addtogroup SDC
  * @{
@@ -30,6 +30,114 @@
 /*===========================================================================*/
 /* Driver constants.                                                         */
 /*===========================================================================*/
+
+/*
+ * SDIO register bit definitions.
+ * CH32 CMSIS header only provides the register structure, not the bit
+ * definitions. These are defined here for driver use.
+ */
+
+/* POWER register */
+#define SDIO_POWER_PWRCTRL_0                ((uint32_t)0x00000001U)
+#define SDIO_POWER_PWRCTRL_1                ((uint32_t)0x00000002U)
+
+/* CLKCR register */
+#define SDIO_CLKCR_CLKDIV_Msk               ((uint32_t)0x000000FFU)
+#define SDIO_CLKCR_CLKEN                    ((uint32_t)0x00000100U)
+#define SDIO_CLKCR_PWRSAV                   ((uint32_t)0x00000200U)  /* bit 9 */
+#define SDIO_CLKCR_BYPASS                   ((uint32_t)0x00000400U)  /* bit 10 */
+#define SDIO_CLKCR_WIDBUS                   ((uint32_t)0x00001800U)
+#define SDIO_CLKCR_WIDBUS_0                 ((uint32_t)0x00000800U)
+#define SDIO_CLKCR_WIDBUS_1                 ((uint32_t)0x00001000U)
+#define SDIO_CLKCR_NEGEDGE                  ((uint32_t)0x00002000U)
+#define SDIO_CLKCR_HWFC_EN                  ((uint32_t)0x00004000U)
+
+/* CMD register (CH32H417 layout — different from STM32!) */
+#define SDIO_CMD_CMDINDEX_Msk               ((uint32_t)0x0000003FU)  /* bits 0-5 */
+#define SDIO_CMD_WAITRESP_0                 ((uint32_t)0x00000040U)  /* bit 6: Response_Short */
+#define SDIO_CMD_WAITRESP_1                 ((uint32_t)0x00000080U)  /* bit 7: (Long=0xC0) */
+#define SDIO_CMD_WAITINT                    ((uint32_t)0x00000100U)  /* bit 8: Wait_IT */
+#define SDIO_CMD_WAITPEND                   ((uint32_t)0x00000200U)  /* bit 9: Wait_Pend */
+#define SDIO_CMD_CPSMEN                     ((uint32_t)0x00000400U)  /* bit 10: CPSM Enable */
+
+/* STA register */
+#define SDIO_STA_CCRCFAIL                   ((uint32_t)0x00000001U)
+#define SDIO_STA_DCRCFAIL                   ((uint32_t)0x00000002U)
+#define SDIO_STA_CTIMEOUT                   ((uint32_t)0x00000004U)
+#define SDIO_STA_DTIMEOUT                   ((uint32_t)0x00000008U)
+#define SDIO_STA_TXUNDERR                   ((uint32_t)0x00000010U)
+#define SDIO_STA_RXOVERR                    ((uint32_t)0x00000020U)
+#define SDIO_STA_CMDREND                    ((uint32_t)0x00000040U)
+#define SDIO_STA_CMDSENT                    ((uint32_t)0x00000080U)
+#define SDIO_STA_DATAEND                    ((uint32_t)0x00000100U)
+#define SDIO_STA_STBITERR                   ((uint32_t)0x00000200U)
+#define SDIO_STA_DBCKEND                    ((uint32_t)0x00000400U)
+#define SDIO_STA_CMDACT                     ((uint32_t)0x00000800U)
+#define SDIO_STA_TXACT                      ((uint32_t)0x00001000U)
+#define SDIO_STA_RXACT                      ((uint32_t)0x00002000U)
+#define SDIO_STA_TXFIFOHE                   ((uint32_t)0x00004000U)
+#define SDIO_STA_RXFIFOHF                   ((uint32_t)0x00008000U)
+#define SDIO_STA_TXFIFOF                    ((uint32_t)0x00010000U)
+#define SDIO_STA_RXFIFOF                    ((uint32_t)0x00020000U)
+#define SDIO_STA_TXFIFOE                    ((uint32_t)0x00040000U)
+#define SDIO_STA_RXFIFOE                    ((uint32_t)0x00080000U)
+#define SDIO_STA_TXDAVL                     ((uint32_t)0x00100000U)
+#define SDIO_STA_RXDAVL                     ((uint32_t)0x00200000U)
+#define SDIO_STA_SDIOIT                     ((uint32_t)0x00400000U)
+#define SDIO_STA_CEATAEND                   ((uint32_t)0x00800000U)
+
+/* Error flags mask */
+#define SDIO_STA_ERROR_MASK                                                 \
+  (SDIO_STA_CCRCFAIL | SDIO_STA_DCRCFAIL |                                  \
+   SDIO_STA_CTIMEOUT | SDIO_STA_DTIMEOUT |                                  \
+   SDIO_STA_TXUNDERR | SDIO_STA_RXOVERR  |                                  \
+   SDIO_STA_STBITERR)
+
+/* DCTRL register */
+#define SDIO_DCTRL_DTEN                     ((uint32_t)0x00000001U)
+#define SDIO_DCTRL_DTDIR                    ((uint32_t)0x00000002U)
+#define SDIO_DCTRL_DTMODE                   ((uint32_t)0x00000004U)
+#define SDIO_DCTRL_DMAEN                    ((uint32_t)0x00000008U)
+#define SDIO_DCTRL_DBLOCKSIZE_Msk           ((uint32_t)0x000000F0U)
+#define SDIO_DCTRL_DBLOCKSIZE_0             ((uint32_t)0x00000010U)
+#define SDIO_DCTRL_DBLOCKSIZE_1             ((uint32_t)0x00000020U)
+#define SDIO_DCTRL_DBLOCKSIZE_2             ((uint32_t)0x00000040U)
+#define SDIO_DCTRL_DBLOCKSIZE_3             ((uint32_t)0x00000080U)
+#define SDIO_DCTRL_RWSTART                  ((uint32_t)0x00000100U)
+#define SDIO_DCTRL_RWSTOP                   ((uint32_t)0x00000200U)
+#define SDIO_DCTRL_SDIOEN                   ((uint32_t)0x00000800U)
+
+/* ICR register bits (same as STA) */
+#define SDIO_ICR_CCRCFAILC                  ((uint32_t)0x00000001U)
+#define SDIO_ICR_DCRCFAILC                  ((uint32_t)0x00000002U)
+#define SDIO_ICR_CTIMEOUTC                  ((uint32_t)0x00000004U)
+#define SDIO_ICR_DTIMEOUTC                  ((uint32_t)0x00000008U)
+#define SDIO_ICR_TXUNDERRC                  ((uint32_t)0x00000010U)
+#define SDIO_ICR_RXOVERRC                   ((uint32_t)0x00000020U)
+#define SDIO_ICR_CMDRENDC                   ((uint32_t)0x00000040U)
+#define SDIO_ICR_CMDSENTC                   ((uint32_t)0x00000080U)
+#define SDIO_ICR_DATAENDC                   ((uint32_t)0x00000100U)
+#define SDIO_ICR_STBITERRC                  ((uint32_t)0x00000200U)
+#define SDIO_ICR_DBCKENDC                   ((uint32_t)0x00000400U)
+
+#define SDIO_ICR_ALL_FLAGS                  ((uint32_t)0xFFFFFFFFU)
+
+/* MASK register bits (same as STA) */
+#define SDIO_MASK_CCRCFAILIE                ((uint32_t)0x00000001U)
+#define SDIO_MASK_DCRCFAILIE                ((uint32_t)0x00000002U)
+#define SDIO_MASK_CTIMEOUTIE                ((uint32_t)0x00000004U)
+#define SDIO_MASK_DTIMEOUTIE                ((uint32_t)0x00000008U)
+#define SDIO_MASK_TXUNDERRIE                ((uint32_t)0x00000010U)
+#define SDIO_MASK_RXOVERRIE                 ((uint32_t)0x00000020U)
+#define SDIO_MASK_CMDRENDIE                 ((uint32_t)0x00000040U)
+#define SDIO_MASK_CMDSENTIE                 ((uint32_t)0x00000080U)
+#define SDIO_MASK_DATAENDIE                 ((uint32_t)0x00000100U)
+#define SDIO_MASK_STBITERRIE                ((uint32_t)0x00000200U)
+#define SDIO_MASK_DBCKENDIE                 ((uint32_t)0x00000400U)
+
+/* FIFO threshold: half FIFO = 8 words (32 bytes) */
+#define SDIO_HALFIFO                        8U
+#define SDIO_HALFIFO_BYTES                  32U
 
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
@@ -77,11 +185,22 @@
 #if !defined(CH32_SDC_UNALIGNED_SUPPORT) || defined(__DOXYGEN__)
 #define CH32_SDC_UNALIGNED_SUPPORT          TRUE
 #endif
+
+/**
+ * @brief   SDIO IRQ priority level setting.
+ */
+#if !defined(CH32_SDC_SDIO_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define CH32_SDC_SDIO_IRQ_PRIORITY          9
+#endif
 /** @} */
 
 /*===========================================================================*/
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
+
+#if !CH32_HAS_SDIO1
+#error "SDIO not present in the selected device"
+#endif
 
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
@@ -140,40 +259,36 @@ struct SDCDriver {
   /**
    * @brief Current configuration data.
    */
-  const SDCConfig            *config;
+  const SDCConfig           *config;
   /**
    * @brief Various flags regarding the mounted card.
    */
-  sdcmode_t                  cardmode;
+  sdcmode_t                 cardmode;
   /**
    * @brief Errors flags.
    */
-  sdcflags_t                 errors;
+  sdcflags_t                errors;
   /**
    * @brief Card RCA.
    */
-  uint32_t                   rca;
+  uint32_t                  rca;
   /**
    * @brief   Pointer to the SDIO registers block.
    */
-  SDIO_TypeDef               *sdio;
+  SDIO_TypeDef              *sdio;
   /**
    * @brief   SDIO peripheral clock frequency.
    */
-  uint32_t                   clkfreq;
+  uint32_t                  clkfreq;
   /**
    * @brief   Transaction thread reference, used in I-class APIs.
    */
-  thread_reference_t         thread;
+  thread_reference_t        thread;
+  /* End of the mandatory fields.*/
   /**
    * @brief   Buffer for internal operations (bounce buffer).
    */
-  uint8_t                    *buf;
-  /**
-   * @brief   Word buffer for response polling of internal operations.
-   */
-  uint32_t                   *resp;
-  /* End of the mandatory fields.*/
+  uint8_t                   *buf;
 };
 
 /*===========================================================================*/

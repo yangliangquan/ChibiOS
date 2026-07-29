@@ -575,7 +575,7 @@ typedef struct {
 #define dmaStreamSetMode(dmastp, mode)                                                                                 \
     {                                                                                                                  \
         (dmastp)->channel->CFGR =                                                                                      \
-            ((uint32_t)(mode) | (dmastp)->channel->CFGR) ;                                                             \
+            (uint32_t)(mode);                                                                                          \
     }
 #endif
 
