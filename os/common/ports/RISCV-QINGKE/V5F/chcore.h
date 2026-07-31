@@ -177,44 +177,48 @@
  */
 struct port_extctx
 {
-    uint32_t x1;      /* ra */
-    uint32_t x5;      /* t0 */
-    uint32_t x6;      /* t1 */
-    uint32_t x7;      /* t2 */
-    uint32_t x10;     /* a0 */
-    uint32_t x11;     /* a1 */
-    uint32_t x12;     /* a2 */
-    uint32_t x13;     /* a3 */
-    uint32_t x14;     /* a4 */
-    uint32_t x15;     /* a5 */
-    uint32_t x16;     /* a6 */
-    uint32_t x17;     /* a7 */
-    uint32_t x28;     /* t3 */
-    uint32_t x29;     /* t4 */
-    uint32_t x30;     /* t5 */
-    uint32_t x31;     /* t6 */
-#ifndef __riscv_float_abi_soft 
-    float f0;         /* ft0 */
-    float f1;         /* ft1 */
-    float f2;         /* ft2 */
-    float f3;         /* ft3 */
-    float f4;         /* ft4 */
-    float f5;         /* ft5 */
-    float f6;         /* ft6 */
-    float f7;         /* ft7 */
-    float f10;        /* fa0 */
-    float f11;        /* fa1 */
-    float f12;        /* fa2 */
-    float f13;        /* fa3 */
-    float f14;        /* fa4 */
-    float f15;        /* fa5 */
-    float f16;        /* fa6 */
-    float f17;        /* fa7 */
-    float f28;        /* ft8 */
-    float f29;        /* ft9 */
-    float f30;        /* ft10 */
-    float f31;        /* ft11 */
-#endif
+// #ifndef HARDWARE_STACK
+//     uint32_t x1;      /* ra */
+//     uint32_t x5;      /* t0 */
+//     uint32_t x6;      /* t1 */
+//     uint32_t x7;      /* t2 */
+//     uint32_t x10;     /* a0 */
+//     uint32_t x11;     /* a1 */
+//     uint32_t x12;     /* a2 */
+//     uint32_t x13;     /* a3 */
+//     uint32_t x14;     /* a4 */
+//     uint32_t x15;     /* a5 */
+//     uint32_t x16;     /* a6 */
+//     uint32_t x17;     /* a7 */
+//     uint32_t x28;     /* t3 */
+//     uint32_t x29;     /* t4 */
+//     uint32_t x30;     /* t5 */
+//     uint32_t x31;     /* t6 */
+// // #ifndef __riscv_float_abi_soft 
+// //     float f0;         /* ft0 */
+// //     float f1;         /* ft1 */
+// //     float f2;         /* ft2 */
+// //     float f3;         /* ft3 */
+// //     float f4;         /* ft4 */
+// //     float f5;         /* ft5 */
+// //     float f6;         /* ft6 */
+// //     float f7;         /* ft7 */
+// //     float f10;        /* fa0 */
+// //     float f11;        /* fa1 */
+// //     float f12;        /* fa2 */
+// //     float f13;        /* fa3 */
+// //     float f14;        /* fa4 */
+// //     float f15;        /* fa5 */
+// //     float f16;        /* fa6 */
+// //     float f17;        /* fa7 */
+// //     float f28;        /* ft8 */
+// //     float f29;        /* ft9 */
+// //     float f30;        /* ft10 */
+// //     float f31;        /* ft11 */
+// // #endif
+// #endif
+    uint32_t mstatus; /* Machine status register */
+    uint32_t mepc;
 };
 
 /**
@@ -732,94 +736,100 @@ static __attribute__((always_inline)) inline void recover_context(void)
 static __attribute__((always_inline)) inline void save_context_irq(void)
 {
     RELOAD_SP(-sizeof(struct port_extctx));
-    STORE_REGISTER(1, offsetof(struct port_extctx, x1));
-    STORE_REGISTER(5, offsetof(struct port_extctx, x5));
-    STORE_REGISTER(6, offsetof(struct port_extctx, x6));
-    STORE_REGISTER(7, offsetof(struct port_extctx, x7));
-    STORE_REGISTER(10, offsetof(struct port_extctx, x10));
-    STORE_REGISTER(11, offsetof(struct port_extctx, x11));
-    STORE_REGISTER(12, offsetof(struct port_extctx, x12));
-    STORE_REGISTER(13, offsetof(struct port_extctx, x13));
-    STORE_REGISTER(14, offsetof(struct port_extctx, x14));
-    STORE_REGISTER(15, offsetof(struct port_extctx, x15));
-    STORE_REGISTER(16, offsetof(struct port_extctx, x16));
-    STORE_REGISTER(17, offsetof(struct port_extctx, x17));
-    STORE_REGISTER(28, offsetof(struct port_extctx, x28));
-    STORE_REGISTER(29, offsetof(struct port_extctx, x29));
-    STORE_REGISTER(30, offsetof(struct port_extctx, x30));
-    STORE_REGISTER(31, offsetof(struct port_extctx, x31));
-#ifndef __riscv_float_abi_soft
-    STORE_FLOAT_REGISTER(0, offsetof(struct port_extctx, f0));
-    STORE_FLOAT_REGISTER(1, offsetof(struct port_extctx, f1));
-    STORE_FLOAT_REGISTER(2, offsetof(struct port_extctx, f2));
-    STORE_FLOAT_REGISTER(3, offsetof(struct port_extctx, f3));
-    STORE_FLOAT_REGISTER(4, offsetof(struct port_extctx, f4));
-    STORE_FLOAT_REGISTER(5, offsetof(struct port_extctx, f5));
-    STORE_FLOAT_REGISTER(6, offsetof(struct port_extctx, f6));
-    STORE_FLOAT_REGISTER(7, offsetof(struct port_extctx, f7));
-    STORE_FLOAT_REGISTER(10, offsetof(struct port_extctx, f10));
-    STORE_FLOAT_REGISTER(11, offsetof(struct port_extctx, f11));
-    STORE_FLOAT_REGISTER(12, offsetof(struct port_extctx, f12));
-    STORE_FLOAT_REGISTER(13, offsetof(struct port_extctx, f13));
-    STORE_FLOAT_REGISTER(14, offsetof(struct port_extctx, f14));
-    STORE_FLOAT_REGISTER(15, offsetof(struct port_extctx, f15));
-    STORE_FLOAT_REGISTER(16, offsetof(struct port_extctx, f16));
-    STORE_FLOAT_REGISTER(17, offsetof(struct port_extctx, f17));
-    STORE_FLOAT_REGISTER(28, offsetof(struct port_extctx, f28));
-    STORE_FLOAT_REGISTER(29, offsetof(struct port_extctx, f29));
-    STORE_FLOAT_REGISTER(30, offsetof(struct port_extctx, f30));
-    STORE_FLOAT_REGISTER(31, offsetof(struct port_extctx, f31));
-#endif
+// #ifndef HARDWARE_STACK
+//     STORE_REGISTER(1, offsetof(struct port_extctx, x1));
+//     STORE_REGISTER(5, offsetof(struct port_extctx, x5));
+//     STORE_REGISTER(6, offsetof(struct port_extctx, x6));
+//     STORE_REGISTER(7, offsetof(struct port_extctx, x7));
+//     STORE_REGISTER(10, offsetof(struct port_extctx, x10));
+//     STORE_REGISTER(11, offsetof(struct port_extctx, x11));
+//     STORE_REGISTER(12, offsetof(struct port_extctx, x12));
+//     STORE_REGISTER(13, offsetof(struct port_extctx, x13));
+//     STORE_REGISTER(14, offsetof(struct port_extctx, x14));
+//     STORE_REGISTER(15, offsetof(struct port_extctx, x15));
+//     STORE_REGISTER(16, offsetof(struct port_extctx, x16));
+//     STORE_REGISTER(17, offsetof(struct port_extctx, x17));
+//     STORE_REGISTER(28, offsetof(struct port_extctx, x28));
+//     STORE_REGISTER(29, offsetof(struct port_extctx, x29));
+//     STORE_REGISTER(30, offsetof(struct port_extctx, x30));
+//     STORE_REGISTER(31, offsetof(struct port_extctx, x31));
+// // #ifndef __riscv_float_abi_soft
+// //     STORE_FLOAT_REGISTER(0, offsetof(struct port_extctx, f0));
+// //     STORE_FLOAT_REGISTER(1, offsetof(struct port_extctx, f1));
+// //     STORE_FLOAT_REGISTER(2, offsetof(struct port_extctx, f2));
+// //     STORE_FLOAT_REGISTER(3, offsetof(struct port_extctx, f3));
+// //     STORE_FLOAT_REGISTER(4, offsetof(struct port_extctx, f4));
+// //     STORE_FLOAT_REGISTER(5, offsetof(struct port_extctx, f5));
+// //     STORE_FLOAT_REGISTER(6, offsetof(struct port_extctx, f6));
+// //     STORE_FLOAT_REGISTER(7, offsetof(struct port_extctx, f7));
+// //     STORE_FLOAT_REGISTER(10, offsetof(struct port_extctx, f10));
+// //     STORE_FLOAT_REGISTER(11, offsetof(struct port_extctx, f11));
+// //     STORE_FLOAT_REGISTER(12, offsetof(struct port_extctx, f12));
+// //     STORE_FLOAT_REGISTER(13, offsetof(struct port_extctx, f13));
+// //     STORE_FLOAT_REGISTER(14, offsetof(struct port_extctx, f14));
+// //     STORE_FLOAT_REGISTER(15, offsetof(struct port_extctx, f15));
+// //     STORE_FLOAT_REGISTER(16, offsetof(struct port_extctx, f16));
+// //     STORE_FLOAT_REGISTER(17, offsetof(struct port_extctx, f17));
+// //     STORE_FLOAT_REGISTER(28, offsetof(struct port_extctx, f28));
+// //     STORE_FLOAT_REGISTER(29, offsetof(struct port_extctx, f29));
+// //     STORE_FLOAT_REGISTER(30, offsetof(struct port_extctx, f30));
+// //     STORE_FLOAT_REGISTER(31, offsetof(struct port_extctx, f31));
+// // #endif
+// #endif
+    STORE_CSR(mstatus, offsetof(struct port_extctx, mstatus));
+    STORE_CSR(mepc, offsetof(struct port_extctx, mepc));
 }
 
 static __attribute__((always_inline)) inline void recover_context_irq(void)
 {
-    LOAD_REGISTER(1, offsetof(struct port_extctx, x1));
-    LOAD_REGISTER(5, offsetof(struct port_extctx, x5));
-    LOAD_REGISTER(6, offsetof(struct port_extctx, x6));
-    LOAD_REGISTER(7, offsetof(struct port_extctx, x7));
-    LOAD_REGISTER(10, offsetof(struct port_extctx, x10));
-    LOAD_REGISTER(11, offsetof(struct port_extctx, x11));
-    LOAD_REGISTER(12, offsetof(struct port_extctx, x12));
-    LOAD_REGISTER(13, offsetof(struct port_extctx, x13));
-    LOAD_REGISTER(14, offsetof(struct port_extctx, x14));
-    LOAD_REGISTER(15, offsetof(struct port_extctx, x15));
-    LOAD_REGISTER(16, offsetof(struct port_extctx, x16));
-    LOAD_REGISTER(17, offsetof(struct port_extctx, x17));
-    LOAD_REGISTER(28, offsetof(struct port_extctx, x28));
-    LOAD_REGISTER(29, offsetof(struct port_extctx, x29));
-    LOAD_REGISTER(30, offsetof(struct port_extctx, x30));
-    LOAD_REGISTER(31, offsetof(struct port_extctx, x31));
-#ifndef __riscv_float_abi_soft
-    LOAD_FLOAT_REGISTER(0, offsetof(struct port_extctx, f0));
-    LOAD_FLOAT_REGISTER(1, offsetof(struct port_extctx, f1));
-    LOAD_FLOAT_REGISTER(2, offsetof(struct port_extctx, f2));
-    LOAD_FLOAT_REGISTER(3, offsetof(struct port_extctx, f3));
-    LOAD_FLOAT_REGISTER(4, offsetof(struct port_extctx, f4));
-    LOAD_FLOAT_REGISTER(5, offsetof(struct port_extctx, f5));
-    LOAD_FLOAT_REGISTER(6, offsetof(struct port_extctx, f6));
-    LOAD_FLOAT_REGISTER(7, offsetof(struct port_extctx, f7));
-    LOAD_FLOAT_REGISTER(10, offsetof(struct port_extctx, f10));
-    LOAD_FLOAT_REGISTER(11, offsetof(struct port_extctx, f11));
-    LOAD_FLOAT_REGISTER(12, offsetof(struct port_extctx, f12));
-    LOAD_FLOAT_REGISTER(13, offsetof(struct port_extctx, f13));
-    LOAD_FLOAT_REGISTER(14, offsetof(struct port_extctx, f14));
-    LOAD_FLOAT_REGISTER(15, offsetof(struct port_extctx, f15));
-    LOAD_FLOAT_REGISTER(16, offsetof(struct port_extctx, f16));
-    LOAD_FLOAT_REGISTER(17, offsetof(struct port_extctx, f17));
-    LOAD_FLOAT_REGISTER(28, offsetof(struct port_extctx, f28));
-    LOAD_FLOAT_REGISTER(29, offsetof(struct port_extctx, f29));
-    LOAD_FLOAT_REGISTER(30, offsetof(struct port_extctx, f30));
-    LOAD_FLOAT_REGISTER(31, offsetof(struct port_extctx, f31));
-#endif
+// #ifndef HARDWARE_STACK
+//     LOAD_REGISTER(1, offsetof(struct port_extctx, x1));
+//     LOAD_REGISTER(5, offsetof(struct port_extctx, x5));
+//     LOAD_REGISTER(6, offsetof(struct port_extctx, x6));
+//     LOAD_REGISTER(7, offsetof(struct port_extctx, x7));
+//     LOAD_REGISTER(10, offsetof(struct port_extctx, x10));
+//     LOAD_REGISTER(11, offsetof(struct port_extctx, x11));
+//     LOAD_REGISTER(12, offsetof(struct port_extctx, x12));
+//     LOAD_REGISTER(13, offsetof(struct port_extctx, x13));
+//     LOAD_REGISTER(14, offsetof(struct port_extctx, x14));
+//     LOAD_REGISTER(15, offsetof(struct port_extctx, x15));
+//     LOAD_REGISTER(16, offsetof(struct port_extctx, x16));
+//     LOAD_REGISTER(17, offsetof(struct port_extctx, x17));
+//     LOAD_REGISTER(28, offsetof(struct port_extctx, x28));
+//     LOAD_REGISTER(29, offsetof(struct port_extctx, x29));
+//     LOAD_REGISTER(30, offsetof(struct port_extctx, x30));
+//     LOAD_REGISTER(31, offsetof(struct port_extctx, x31));
+// // #ifndef __riscv_float_abi_soft
+// //     LOAD_FLOAT_REGISTER(0, offsetof(struct port_extctx, f0));
+// //     LOAD_FLOAT_REGISTER(1, offsetof(struct port_extctx, f1));
+// //     LOAD_FLOAT_REGISTER(2, offsetof(struct port_extctx, f2));
+// //     LOAD_FLOAT_REGISTER(3, offsetof(struct port_extctx, f3));
+// //     LOAD_FLOAT_REGISTER(4, offsetof(struct port_extctx, f4));
+// //     LOAD_FLOAT_REGISTER(5, offsetof(struct port_extctx, f5));
+// //     LOAD_FLOAT_REGISTER(6, offsetof(struct port_extctx, f6));
+// //     LOAD_FLOAT_REGISTER(7, offsetof(struct port_extctx, f7));
+// //     LOAD_FLOAT_REGISTER(10, offsetof(struct port_extctx, f10));
+// //     LOAD_FLOAT_REGISTER(11, offsetof(struct port_extctx, f11));
+// //     LOAD_FLOAT_REGISTER(12, offsetof(struct port_extctx, f12));
+// //     LOAD_FLOAT_REGISTER(13, offsetof(struct port_extctx, f13));
+// //     LOAD_FLOAT_REGISTER(14, offsetof(struct port_extctx, f14));
+// //     LOAD_FLOAT_REGISTER(15, offsetof(struct port_extctx, f15));
+// //     LOAD_FLOAT_REGISTER(16, offsetof(struct port_extctx, f16));
+// //     LOAD_FLOAT_REGISTER(17, offsetof(struct port_extctx, f17));
+// //     LOAD_FLOAT_REGISTER(28, offsetof(struct port_extctx, f28));
+// //     LOAD_FLOAT_REGISTER(29, offsetof(struct port_extctx, f29));
+// //     LOAD_FLOAT_REGISTER(30, offsetof(struct port_extctx, f30));
+// //     LOAD_FLOAT_REGISTER(31, offsetof(struct port_extctx, f31));
+// // #endif
+// #endif
+    LOAD_CSR(mstatus, offsetof(struct port_extctx, mstatus));
+    LOAD_CSR(mepc, offsetof(struct port_extctx, mepc));
     RELOAD_SP(sizeof(struct port_extctx));
 }
 
 static __attribute__((always_inline)) inline void _port_irq_prologue(void)
 {
-#ifdef HARDWARE_STACK
     save_context_irq();
-#endif
 }
 
 /* Forward declarations for kernel functions used by _port_irq_epilogue.
@@ -836,20 +846,22 @@ extern void chSchDoPreemption(void);
 
 static __attribute__((always_inline)) inline void _port_irq_epilogue(void)
 {
-
-    if (chSchIsPreemptionRequired())
+    if (chSchIsPreemptionRequired() && ((NVIC->GISR & 0xff) == 1) && !(NVIC->GISR & (1U << 9)))
     {
-        port_lock();
-        __dbg_check_lock();
-        chSchDoPreemption();
-        __dbg_check_unlock();
-        port_unlock();
-    }
 #ifdef HARDWARE_STACK
-    recover_context_irq();
+        __asm volatile("addi t0, zero, (1<<5)");
+        __asm volatile("csrs 0x804, t0");
 #endif
-
-    __asm volatile("mret");
+        asm volatile("li t0, (1U << 7)" ::: "t0");
+        asm volatile("csrc mstatus, t0");
+        asm volatile("la t0, __irq_switch_adapter" ::: "t0");
+        asm volatile("csrw mepc, t0");
+        asm volatile("mret");
+    }
+    else
+    {
+        asm volatile("j __irq_switch_adapter_exit");
+    }
 }
 
 #endif /* !defined(_FROM_ASM_) */

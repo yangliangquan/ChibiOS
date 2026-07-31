@@ -88,7 +88,27 @@ __attribute__((naked)) void _port_switch(thread_t *ntp, thread_t *otp)
 extern uint32_t vector_start[];
 extern void HardFault_Handler(void);
 #include "core_riscv.h"
-__attribute__((naked, section(".irq_entry"))) void _port_irq_handler(void)
+
+static __attribute__((always_inline, aligned(4))) inline void irq_switch_adapter()
+{
+    asm volatile(".align 4");
+    asm volatile("__irq_switch_adapter:");
+    __stats_start_measure_crit_thd();
+    __dbg_check_lock();
+    chSchDoPreemption();
+    __dbg_check_unlock();
+    __stats_stop_measure_crit_thd();
+    asm volatile(".align 4");
+    asm volatile("__irq_switch_adapter_exit:");
+    recover_context_irq();
+}
+
+#ifdef HARDWARE_STACK
+__attribute__((interrupt("WCH-Interrupt-fast"))) 
+#else
+__attribute__((interrupt()))
+#endif
+__attribute__((section(".irq_entry"), aligned(4))) void _port_irq_handler(void)
 {
     CH_IRQ_PROLOGUE();
     void (*_handler)(void);
@@ -110,6 +130,7 @@ __attribute__((naked, section(".irq_entry"))) void _port_irq_handler(void)
     _handler();
 
     CH_IRQ_EPILOGUE();
+    irq_switch_adapter();
 }
 
 __attribute__((naked)) void _port_thread_start()
