@@ -665,9 +665,215 @@ static void cmd_reset(BaseSequentialStream *chp, int argc, char *argv[]) {
   NVIC_SystemReset();
 }
 
+/*===========================================================================*/
+/* RTC shell command.                                                         */
+/*===========================================================================*/
+
+#define RTC_TEST_SECONDS_WAIT  5U
+
+static void cmd_rtc(BaseSequentialStream *chp, int argc, char *argv[]) {
+  RTCDateTime rtc_now;
+  RTCDateTime alarm_time;
+  RTCAlarm rtc_alarm;
+  struct tm timp;
+  uint32_t tv_msec;
+  uint32_t test_timestamp, alarm_timestamp;
+
+  (void)argc;
+  (void)argv;
+
+  chprintf(chp, "rtc: starting test...\r\n");
+
+  /*----------------------------------------------------------------------*/
+  /* 1. Check RTC driver availability.                                   */
+  /*----------------------------------------------------------------------*/
+#if CH32_RTC_USE_RTC1 != TRUE
+  chprintf(chp, "rtc: RTC1 is not enabled in mcuconf.h\r\n");
+  return;
+#endif
+
+  /*----------------------------------------------------------------------*/
+  /* 2. Initialize RTC driver.                                            */
+  /*----------------------------------------------------------------------*/
+  rtcInit();
+  chprintf(chp, "rtc: driver initialized\r\n");
+
+  /*----------------------------------------------------------------------*/
+  /* 3. Get current RTC time.                                             */
+  /*----------------------------------------------------------------------*/
+  rtcGetTime(&RTCD1, &rtc_now);
+
+  chprintf(chp, "rtc: current time:\r\n");
+  chprintf(chp, "rtc:   year  = %u (since 1980)\r\n", (unsigned)rtc_now.year);
+  chprintf(chp, "rtc:   month = %u\r\n", (unsigned)rtc_now.month);
+  chprintf(chp, "rtc:   day   = %u\r\n", (unsigned)rtc_now.day);
+  chprintf(chp, "rtc:   dayofweek = %u\r\n", (unsigned)rtc_now.dayofweek);
+  chprintf(chp, "rtc:   hours = %u\r\n", (unsigned)rtc_now.millisecond >> 19);
+  chprintf(chp, "rtc:   minutes = %u\r\n",
+           (rtc_now.millisecond >> 13) & 0x3F);
+  chprintf(chp, "rtc:   seconds = %u\r\n",
+           (rtc_now.millisecond >> 6) & 0x3F);
+  chprintf(chp, "rtc:   milliseconds = %u\r\n",
+           rtc_now.millisecond & 0x3F);
+
+  /* Convert to struct tm for human-readable output */
+  rtcConvertDateTimeToStructTm(&rtc_now, &timp, NULL);
+  chprintf(chp, "rtc:   formatted = %04u-%02u-%02u %02u:%02u:%02u\r\n",
+           timp.tm_year + 1900,
+           timp.tm_mon + 1,
+           timp.tm_mday,
+           timp.tm_hour,
+           timp.tm_min,
+           timp.tm_sec);
+
+  /*----------------------------------------------------------------------*/
+  /* 4. Set a test time (current time + 1 day).                          */
+  /*----------------------------------------------------------------------*/
+  chprintf(chp, "rtc: setting test time (current + 1 day)...\r\n");
+
+  rtc_now.millisecond = (rtc_now.millisecond & ~0x0040FFFFFF) | 0x00000000;
+  rtc_now.day += 1;
+
+  /* Handle month rollover */
+  if (rtc_now.day > 31) {
+    rtc_now.day = 1;
+    rtc_now.month += 1;
+  }
+  /* Handle year rollover */
+  if (rtc_now.month > 12) {
+    rtc_now.month = 1;
+    rtc_now.year += 1;
+  }
+
+  rtcSetTime(&RTCD1, &rtc_now);
+  rtcGetTime(&RTCD1, &rtc_now);
+
+  chprintf(chp, "rtc: set time:\r\n");
+  chprintf(chp, "rtc:   year  = %u (since 1980)\r\n", (unsigned)rtc_now.year);
+  chprintf(chp, "rtc:   month = %u\r\n", (unsigned)rtc_now.month);
+  chprintf(chp, "rtc:   day   = %u\r\n", (unsigned)rtc_now.day);
+  chprintf(chp, "rtc:   hours = %u\r\n", (unsigned)rtc_now.millisecond >> 19);
+  chprintf(chp, "rtc:   minutes = %u\r\n",
+           (rtc_now.millisecond >> 13) & 0x3F);
+  chprintf(chp, "rtc:   seconds = %u\r\n",
+           (rtc_now.millisecond >> 6) & 0x3F);
+
+  /* Convert to Unix timestamp for reference */
+  rtcConvertDateTimeToStructTm(&rtc_now, &timp, &tv_msec);
+  test_timestamp = (uint32_t)mktime(&timp);
+  chprintf(chp, "rtc:   Unix timestamp = %lu\r\n", (unsigned long)test_timestamp);
+
+  /*----------------------------------------------------------------------*/
+  /* 5. Test floating point timestamp conversion.                         */
+  /*----------------------------------------------------------------------*/
+  {
+    uint32_t tv_sec = 1293840000U;  /* 2011-01-01 00:00:00 UTC */
+
+    struct tm *timp_local = gmtime_r((const time_t *)&tv_sec, &timp);
+    if (timp_local != NULL) {
+      chprintf(chp, "rtc: test timestamp %lu:\r\n", (unsigned long)tv_sec);
+      chprintf(chp, "rtc:   %04u-%02u-%02u %02u:%02u:%02u\r\n",
+               timp_local->tm_year + 1900,
+               timp_local->tm_mon + 1,
+               timp_local->tm_mday,
+               timp_local->tm_hour,
+               timp_local->tm_min,
+               timp_local->tm_sec);
+    }
+    else {
+      chprintf(chp, "rtc: failed to convert timestamp\r\n");
+    }
+  }
+
+  /*----------------------------------------------------------------------*/
+  /* 6. Set an alarm for 10 seconds from now                            */
+  /*----------------------------------------------------------------------*/
+  {
+    chprintf(chp, "rtc: setting alarm for %u seconds from now...\r\n", RTC_TEST_SECONDS_WAIT);
+
+    /* Get current time */
+    rtcGetTime(&RTCD1, &alarm_time);
+
+    /* Convert to struct tm */
+    rtcConvertDateTimeToStructTm(&alarm_time, &timp, &tv_msec);
+
+    /* Calculate Unix timestamp and add seconds */
+    alarm_timestamp = (uint32_t)mktime(&timp) + RTC_TEST_SECONDS_WAIT;
+
+    /* Initialize alarm structure with Unix timestamp */
+    memset(&rtc_alarm, 0, sizeof(rtc_alarm));
+    rtc_alarm.tv_sec = alarm_timestamp;
+
+    /* Set the alarm */
+    rtcSetAlarm(&RTCD1, 0, &rtc_alarm);
+    chprintf(chp, "rtc: alarm set successfully\r\n");
+
+    /* Read back and display */
+    RTCAlarm read_alarm;
+    rtcGetAlarm(&RTCD1, 0, &read_alarm);
+    chprintf(chp, "rtc: alarm read back:\r\n");
+    chprintf(chp, "rtc:   alarm time (Unix timestamp) = %lu\r\n",
+             (unsigned long)read_alarm.tv_sec);
+    /* Convert alarm timestamp back to readable format */
+    struct tm *timp_local = localtime_r((const time_t *)&read_alarm.tv_sec, &timp);
+    if (timp_local != NULL) {
+      chprintf(chp, "rtc:   alarm time (formatted) = %04u-%02u-%02u %02u:%02u:%02u\r\n",
+               timp_local->tm_year + 1900,
+               timp_local->tm_mon + 1,
+               timp_local->tm_mday,
+               timp_local->tm_hour,
+               timp_local->tm_min,
+               timp_local->tm_sec);
+    }
+  }
+
+  /*----------------------------------------------------------------------*/
+  /* 7. Wait and check alarm status                                      */
+  /*----------------------------------------------------------------------*/
+  {
+    chprintf(chp, "rtc: waiting %u second(s) for alarm...\r\n", RTC_TEST_SECONDS_WAIT);
+    chThdSleepMilliseconds(RTC_TEST_SECONDS_WAIT * 1000);
+    chprintf(chp, "rtc: wait complete\r\n");
+  }
+
+  /*----------------------------------------------------------------------*/
+  /* 8. Display final time                                               */
+  /*----------------------------------------------------------------------*/
+  chprintf(chp, "rtc: final time:\r\n");
+  rtcGetTime(&RTCD1, &rtc_now);
+  chprintf(chp, "rtc:   %04u-%02u-%02u %02u:%02u:%02u.%03u\r\n",
+           rtc_now.year + 1980,
+           rtc_now.month,
+           rtc_now.day,
+           rtc_now.millisecond >> 19,
+           (rtc_now.millisecond >> 13) & 0x3F,
+           (rtc_now.millisecond >> 6) & 0x3F,
+           rtc_now.millisecond & 0x3F);
+
+  /*----------------------------------------------------------------------*/
+  /* 9. Display alarm status                                             */
+  /*----------------------------------------------------------------------*/
+  {
+    uint32_t alarm_sr = RTC->CTLRL;
+
+    chprintf(chp, "rtc: RTC Control Register (CTLR)& bits:\r\n");
+    chprintf(chp, "rtc:   RSF   = %u\r\n", (alarm_sr & RTC_CTLRL_RSF) ? 1 : 0);
+    chprintf(chp, "rtc:   CNF   = %u\r\n", (alarm_sr & RTC_CTLRL_CNF) ? 1 : 0);
+    chprintf(chp, "rtc:   RTOFF = %u\r\n", (alarm_sr & RTC_CTLRL_RTOFF) ? 1 : 0);
+    /* Note: OSF bit may not be supported on all variants */
+    #ifdef RTC_CTLRL_OSF
+    chprintf(chp, "rtc:   OSF   = %u\r\n", (alarm_sr & RTC_CTLRL_OSF) ? 1 : 0);
+    #endif
+    chprintf(chp, "rtc:   RESERVED = 0x%04lx\r\n", (long)(alarm_sr & 0xE3F3));
+  }
+
+  chprintf(chp, "rtc: all tests complete\r\n");
+}
+
 static const ShellCommand shell_commands[] = {
   {"sdio", cmd_sdio},
   {"wspi", cmd_wspi},
+  {"rtc", cmd_rtc},
   {"reset", cmd_reset},
   {NULL, NULL}
 };
