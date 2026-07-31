@@ -146,8 +146,6 @@ static void rtc_decode(uint32_t tv_sec, uint32_t tv_msec,
  * @details Handles second and alarm interrupt events.
  */
 OSAL_IRQ_HANDLER(CH32_RTC_TAMP_STAMP_HANDLER) {
-  OSAL_IRQ_PROLOGUE();
-
 #if (CH32_RTC_USE_RTC1 == TRUE)
   if ((RTC->CTLRH & RTC_CTLRH_SECIE) != 0 &&
       (RTC->CTLRL & RTC_CTLRL_SECF) != 0) {
@@ -161,8 +159,6 @@ OSAL_IRQ_HANDLER(CH32_RTC_TAMP_STAMP_HANDLER) {
     RTC->CTLRL &= (uint16_t)~RTC_CTLRL_OWF;
   }
 #endif
-
-  OSAL_IRQ_EPILOGUE();
 }
 
 /**
@@ -170,7 +166,6 @@ OSAL_IRQ_HANDLER(CH32_RTC_TAMP_STAMP_HANDLER) {
  * @details Handles alarm match interrupt events.
  */
 OSAL_IRQ_HANDLER(CH32_RTC_ALARM_HANDLER) {
-  OSAL_IRQ_PROLOGUE();
 
 #if (CH32_RTC_USE_RTC1 == TRUE)
   if ((RTC->CTLRL & RTC_CTLRL_ALRF) != 0) {
@@ -181,7 +176,6 @@ OSAL_IRQ_HANDLER(CH32_RTC_ALARM_HANDLER) {
   }
 #endif
 
-  OSAL_IRQ_EPILOGUE();
 }
 
 /*===========================================================================*/
