@@ -845,15 +845,15 @@ static __attribute__((always_inline)) inline void _port_irq_epilogue(void)
         __asm volatile("addi t0, zero, (1<<5)");
         __asm volatile("csrs 0x804, t0");
 #endif
-        asm volatile("li t0, (1U << 7)" ::: "t0");
-        asm volatile("csrc mstatus, t0");
-        asm volatile("la t0, __irq_switch_adapter" ::: "t0");
-        asm volatile("csrw mepc, t0");
-        asm volatile("mret");
+        __asm volatile("li t0, (1U << 7)" ::: "t0");
+        __asm volatile("csrc mstatus, t0");
+        __asm volatile("la t0, __irq_switch_adapter" ::: "t0");
+        __asm volatile("csrw mepc, t0");
+        __asm volatile("mret");
     }
     else
     {
-        asm volatile("j __irq_switch_adapter_exit");
+        __asm volatile("j __irq_switch_adapter_exit");
     }
 }
 
