@@ -500,7 +500,7 @@ extern "C" {
  * @retval true         running in ISR mode.
  */
 static inline bool port_is_isr_context(void) {
-  return (NVIC->GISR & 0xFF) == 0;
+  return (NVIC->GISR & 0xFF) != 0;
 }
 
 /**
