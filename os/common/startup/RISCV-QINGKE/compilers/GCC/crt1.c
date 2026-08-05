@@ -53,7 +53,7 @@
  * @note    This function is a weak symbol.
  */
 #if !defined(__DOXYGEN__)
-__attribute__((weak, section(".handle_reset")))
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
 #endif
 /*lint -save -e9075 [8.4] All symbols are invoked from asm context.*/
 void __core_init(void) {}
@@ -66,7 +66,7 @@ void __core_init(void) {}
  * @note    This function is a weak symbol.
  */
 #if !defined(__DOXYGEN__)
-__attribute__((weak, section(".handle_reset")))
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
 #endif
 /*lint -save -e9075 [8.4] All symbols are invoked from asm context.*/
 void __early_init(void) {}
@@ -80,7 +80,7 @@ void __early_init(void) {}
  * @note    This function is a weak symbol.
  */
 #if !defined(__DOXYGEN__)
-__attribute__((weak, section(".handle_reset")))
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
 #endif
 /*lint -save -e9075 [8.4] All symbols are invoked from asm context.*/
 void __late_init(void) {}
@@ -93,7 +93,7 @@ void __late_init(void) {}
  * @note    This function is a weak symbol.
  */
 #if !defined(__DOXYGEN__)
-__attribute__((noreturn, weak, section(".handle_reset")))
+__attribute__((noreturn, weak, section(".handle_reset"),optimize("O0")))
 #endif
 /*lint -save -e9075 [8.4] All symbols are invoked from asm context.*/
 void __default_exit(void) {
@@ -105,8 +105,101 @@ void __default_exit(void) {
 /**
  * @brief   Performs the initialization of the various RAM areas.
  */
-__attribute__((weak, section(".handle_reset")))
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
 void __init_ram_areas(void) {
+}
+
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
+void call_constructors(){
+    extern uint32_t __init_array_start[];
+    extern uint32_t __init_array_end[];
+
+    for(uint32_t *p = __init_array_start; p < __init_array_end; p++){
+        ((void (*)(void))(*p))();
+    }
+}
+
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
+void call_destructors(){
+    extern uint32_t __fini_array_start[];
+    extern uint32_t __fini_array_end[];
+
+    for(uint32_t *p = __fini_array_start; p < __fini_array_end; p++){
+        ((void (*)(void))(*p))();
+    }
+}
+
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
+void clearbss(){
+    extern uint32_t _sbss[];
+    extern uint32_t _ebss[];
+    uint32_t *p = _sbss;
+    while(p < _ebss){
+        *p = 0;
+        p++;
+    }
+}
+
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
+void loaddata2vma(){
+    extern uint32_t _data_lma[];
+    extern uint32_t _data_vma[];
+    extern uint32_t _edata[];
+
+    uint32_t *p = _data_lma;
+    uint32_t *q = _data_vma;
+    while(q < _edata){
+        *q = *p;
+        p++;
+        q++;
+    }
+}
+
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
+void loadcode2vma(){
+    extern uint32_t  _highcode_lma[];
+    extern uint32_t  _highcode_vma_start[];
+    extern uint32_t  _highcode_vma_end[];
+
+    uint32_t *p = _highcode_lma;
+    uint32_t *q = _highcode_vma_start;
+    while(q < _highcode_vma_end){
+        *q = *p;
+        p++;
+        q++;
+    }
+
+    extern uint32_t _highcode_lma1[];
+    extern uint32_t _highcode_vma_start1[];
+    extern uint32_t _highcode_vma_end1[];
+
+    p = _highcode_lma1;
+    q = _highcode_vma_start1;
+    while(q < _highcode_vma_end1){
+        *q = *p;
+        p++;
+        q++;
+    }
+}
+
+/**
+ * @brief   Stack segments initialization switch.
+ */
+#if !defined(CRT0_STACKS_FILL_PATTERN) || defined(__DOXYGEN__)
+#define CRT0_STACKS_FILL_PATTERN            0x55555555
+#endif
+
+__attribute__((weak, section(".handle_reset"),optimize("O0")))
+void colorize_stack(){
+    extern uint32_t __process_stack_base__[];
+    extern uint32_t __process_stack_end__[];
+
+    uint32_t *p = __process_stack_base__;
+    uint32_t *q = __process_stack_end__;
+    while(p < q){
+        *p = CRT0_STACKS_FILL_PATTERN;
+        p++;
+    }
 }
 
 /** @} */

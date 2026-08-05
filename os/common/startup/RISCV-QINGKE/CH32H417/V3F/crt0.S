@@ -153,85 +153,10 @@ swicth_clock_pll70m:
     beqz s2, 1b
     ret
 
-loadcode2vma:
-/* Load highcode code  section from flash to RAM */
-    la a0, _highcode_lma
-    la a1, _highcode_vma_start
-    la a2, _highcode_vma_end
-    bgeu a1, a2, 2f
-1:
-    lw t0, (a0)
-    sw t0, (a1)
-    addi a0, a0, 4
-    addi a1, a1, 4
-    bltu a1, a2, 1b
 
-/* Load highcode code  section from flash to RAM */
-2:
-    la a0, _highcode_lma1
-    la a1, _highcode_vma_start1
-    la a2, _highcode_vma_end1
-    bgeu a1, a2, 2f
-1:
-    lw t0, (a0)
-    sw t0, (a1)
-    addi a0, a0, 4
-    addi a1, a1, 4
-    bltu a1, a2, 1b
-    ret
-
-loaddata2vma:
-/* Load data section from flash to RAM */
-2:
-	la a0, _data_lma
-	la a1, _data_vma
-	la a2, _edata
-	bgeu a1, a2, 2f
-1:
-	lw t0, (a0)
-	sw t0, (a1)
-	addi a0, a0, 4
-	addi a1, a1, 4
-	bltu a1, a2, 1b
-    ret
-
-clearbss:
-2:
-/* Clear bss section */
-	la a0, _sbss
-	la a1, _ebss
-	bgeu a0, a1, 2f
-1:
-	sw zero, (a0)
-	addi a0, a0, 4
-	bltu a0, a1, 1b
-2:  
-    ret
-
-call_constructors:
-/* Call constructors */
-	la a0, __init_array_start
-    la a1, __init_array_end
-1:
-    bgeu a0, a1, 2f
-    jalr (a0)
-    addi a0, a0, 4
-    j 1b
-2:  ret
-
-call_destructors:
-/* Call destructors */
-    la a0, __fini_array_start
-    la a1, __fini_array_end
-1:
-    bgeu a0, a1, 2f
-    jalr (a0)
-    addi a0, a0, 4
-    j 1b
-2:  ret
-
-handle_reset:
-.option push 
+.section	.handle_reset,"ax",@progbits
+.option push
+handle_reset: 
 .option	norelax 
 	la gp, __global_pointer$
 .option	pop 
@@ -258,17 +183,7 @@ handle_reset:
 
     call __early_init
 #if CRT0_INIT_STACKS
-2:
-colorize_stack:
-/* Colorize stack */
-	la a0, __main_thread_stack_base__
-    la a1, __main_thread_stack_end__
-    li t0, CRT0_STACKS_FILL_PATTERN
-    bgeu a0, a1, 2f
-1:
-	sw t0, (a0)
-	addi a0, a0, 4
-	bltu a0, a1, 1b
+    call colorize_stack
 #endif
 
 2:  
