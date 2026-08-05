@@ -19,11 +19,11 @@ MEMORY
 
 SECTIONS
 {
-	.init :
+	.start :
 	{
 		_sinit = .;
 		. = ALIGN(4);
-		KEEP(*(SORT_NONE(.init)))
+		KEEP(*(SORT_NONE(.start)))
 		. = ALIGN(4);
 		_einit = .;
 	} >FLASH AT>FLASH

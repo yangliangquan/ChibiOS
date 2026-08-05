@@ -78,7 +78,7 @@
 #define CRT0_CALL_DESTRUCTORS               TRUE
 #endif
 
-	.section	.init,"ax",@progbits
+	.section	.start,"ax",@progbits
 	.global	_start
 	.align	2
 _start:
