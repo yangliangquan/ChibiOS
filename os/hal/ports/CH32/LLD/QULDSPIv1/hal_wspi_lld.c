@@ -305,7 +305,7 @@ void wspi_lld_command(WSPIDriver *wspip, const wspi_command_t *cmdp) {
 
   wspip->qspi->CR &= ~QSPI_CR_DMAEN;
 
-  wspip.qspi->FCR = QSPI_FCR_CTEF | QSPI_FCR_CTCF |
+  wspip->qspi->FCR = QSPI_FCR_CTEF | QSPI_FCR_CTCF |
                      QSPI_FCR_CSMF | QSPI_FCR_CTOF;
 
   wspip->qspi->CCR = wspi_build_ccr(cmdp);
@@ -340,7 +340,7 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
   dmaStreamDisable(wspip->dma);
   wspip->qspi->CR &= ~QSPI_CR_DMAEN;
 
-  wspip.qspi->FCR = QSPI_FCR_CTEF | QSPI_FCR_CTCF |
+  wspip->qspi->FCR = QSPI_FCR_CTEF | QSPI_FCR_CTCF |
                      QSPI_FCR_CSMF | QSPI_FCR_CTOF;
 
   wspip->qspi->CCR = wspi_build_ccr(cmdp)
@@ -389,7 +389,7 @@ void wspi_lld_receive(WSPIDriver *wspip, const wspi_command_t *cmdp,
   dmaStreamDisable(wspip->dma);
   wspip->qspi->CR &= ~QSPI_CR_DMAEN;
 
-  wspip.qspi->FCR = QSPI_FCR_CTEF | QSPI_FCR_CTCF |
+  wspip->qspi->FCR = QSPI_FCR_CTEF | QSPI_FCR_CTCF |
                      QSPI_FCR_CSMF | QSPI_FCR_CTOF;
 
   wspip->qspi->CCR = wspi_build_ccr(cmdp) |
