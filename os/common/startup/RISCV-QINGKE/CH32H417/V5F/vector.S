@@ -5,8 +5,8 @@
 ********************************************************************************/
 /* TODO: Implement V5F vector table */
 .section    .vector,"ax",@progbits
-    # .align  4
-    # .global _vector_base
+    .align  4
+    .global _vector_base
 _vector_base:
     .option norvc;
     .word   _start

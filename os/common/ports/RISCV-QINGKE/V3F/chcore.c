@@ -85,7 +85,7 @@ __attribute__((naked)) void _port_switch(thread_t *ntp, thread_t *otp)
 }
 
 
-extern uint32_t vector_start[];
+extern uint32_t _vector_base[];
 extern void HardFault_Handler(void);
 #include "core_riscv.h"
 
@@ -118,7 +118,7 @@ __attribute__((section(".irq_entry"), aligned(4))) void _port_irq_handler(void)
     if ((irq_reason & 0x80000000) != 0)
     {
         uint32_t irq_id = irq_reason & 0x7fffffff;
-        uint32_t vectoraddr = vector_start[irq_id];
+        uint32_t vectoraddr = _vector_base[irq_id];
 
         _handler = (void (*)(void))vectoraddr;
     }
