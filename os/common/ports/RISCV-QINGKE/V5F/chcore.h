@@ -318,6 +318,14 @@ struct port_context {
  */
 #define PORT_THD_FUNCTION(tname, arg) void tname(void *arg)
 
+#if defined(__riscv_f) && defined (__riscv_v)
+#define PORT_SETUP_MSTATUS_CONTEXT(tp) ((tp)->ctx.sp->mstatus = 0x7e00)
+#elif defined(__riscv_f)
+#define PORT_SETUP_MSTATUS_CONTEXT(tp) ((tp)->ctx.sp->mstatus = 0x7800)
+#elif defined(__riscv_v)
+#define PORT_SETUP_MSTATUS_CONTEXT(tp) ((tp)->ctx.sp->mstatus = 0x1E00)
+#endif
+
 /**
  * @brief   Platform dependent part of the @p chThdCreateI() API.
  * @details This code usually setup the context switching frame represented
@@ -329,6 +337,8 @@ struct port_context {
         (tp)->ctx.sp->x1 = (uint32_t)_port_thread_start;                                                               \
         (tp)->ctx.sp->x8 = (uint32_t)(pf);                                                                             \
         (tp)->ctx.sp->x9 = (uint32_t)(arg);                                                                            \
+        PORT_SETUP_MSTATUS_CONTEXT(tp);                                                                                \
+        (tp)->ctx.sp->mepc = (uint32_t)_port_thread_start;                                                             \
     }
 
 /**
@@ -500,7 +510,7 @@ extern "C" {
  * @retval true         running in ISR mode.
  */
 static inline bool port_is_isr_context(void) {
-  return (NVIC->GISR & 0xFF) == 0;
+  return (NVIC->GISR & 0xFF) != 0;
 }
 
 /**
