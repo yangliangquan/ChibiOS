@@ -87,6 +87,28 @@ ifneq ($(findstring HAL_USE_WSPI TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1/hal_wspi_lld.c
 endif
 else
+# Configuration files directory
+ifeq ($(CONFDIR),)
+  CONFDIR = .
+endif
+
+HALCONF := $(strip $(shell cat $(CONFDIR)/halconf.h | egrep -e "\#define"))
+MCUCONF := $(strip $(shell cat $(CONFDIR)/mcuconf.h | egrep -e "\#define"))
+
+# Select SDMMC or SDIO LLD src path
+ifneq ($(findstring CH32_SDC_USE_SDIO TRUE,$(MCUCONF)),)
+CH32_SDC_SRC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1/hal_sdc_lld.c
+else
+CH32_SDC_SRC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1/hal_sdc_lld.c
+endif
+
+# Select USBHS or OTG LLD src path
+ifneq ($(findstring CH32_OTG_USE_USB1 TRUE,$(MCUCONF)),)
+CH32_USB_SRC = ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1/hal_usb_lld.c
+else
+CH32_USB_SRC = ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1/hal_usb_lld.c
+endif
+
 PLATFORMSRC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f/hal_st_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1/ch32_dma.c \
@@ -103,16 +125,15 @@ PLATFORMSRC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/GPIOv1/hal_pal_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/TIMv1/hal_pwm_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1/hal_rtc_lld.c \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1/hal_sdc_lld.c \
+              $(CH32_SDC_SRC)\
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_serial_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_sio_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/SPIv1/hal_spi_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RNGv1/hal_trng_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_uart_lld.c \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1/hal_usb_lld.c \
+              $(CH32_USB_SRC)\
               ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1/hal_wdg_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1/hal_wspi_lld.c
-endif
 
 # Required include directories
 
@@ -123,28 +144,13 @@ else
 CH32_SDC_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1
 endif
 
+# Select USBHS or OTG LLD src path
 ifneq ($(findstring CH32_OTG_USE_USB1 TRUE,$(MCUCONF)),)
-PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
-              ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/ADCv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/CANv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/CRYPv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/DACv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/EFLv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/TIMv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/I2Cv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/SPIv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/MACv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/GPIOv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/RNGv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1 \
-              $(CH32_SDC_LLDINC) \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1
+CH32_USB_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1
 else
+CH32_USB_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1
+endif
+
 PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
               ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1 \
@@ -164,7 +170,8 @@ PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1
+              $(CH32_USB_LLDINC)
+
 endif
 # Shared variables
 ALLCSRC += $(PLATFORMSRC)
