@@ -348,10 +348,6 @@ static inline bool halClockSwitchMode(const halclkcfg_t *ccp) {
 #include "hal_wdg.h"
 #include "hal_wspi.h"
 
-#if __has_include("usbcfg.h")
-#  include "usbcfg.h"
-#endif
-
 /*
  *  The ST driver is a special case, it is only included if the OSAL is
  *  configured to require it.
