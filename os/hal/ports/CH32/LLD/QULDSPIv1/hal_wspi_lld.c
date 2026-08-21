@@ -376,9 +376,16 @@ void wspi_lld_select_flash(WSPIDriver *wspip, uint8_t fselect) {
 void wspi_lld_command(WSPIDriver *wspip, const wspi_command_t *cmdp) {
 
   /* Wait for previous transfer to complete and QSPI to be idle.*/
-  wspi_lld_sync(wspip);
+  
   while (!wspi_lld_idle_p(wspip)) {
   }
+
+  wspip->qspi->CR |= QSPI_CR_ABORT;
+  while((wspip->qspi->CR & QSPI_CR_ABORT) != 0U) {
+  }
+
+  wspi_lld_sync(wspip);
+
 
   wspip->qspi->CR &= ~QSPI_CR_DMAEN;
 
@@ -411,9 +418,12 @@ void wspi_lld_send(WSPIDriver *wspip, const wspi_command_t *cmdp,
                    size_t n, const uint8_t *txbuf) {
 
   /* Wait for previous transfer to complete and QSPI to be idle.*/
-  wspi_lld_sync(wspip);
   while (!wspi_lld_idle_p(wspip)) {
   }
+  wspip->qspi->CR |= QSPI_CR_ABORT;
+  while((wspip->qspi->CR & QSPI_CR_ABORT) != 0U) {
+  }
+  wspi_lld_sync(wspip);
   dmaStreamDisable(wspip->dma);
   wspip->qspi->CR &= ~QSPI_CR_DMAEN;
 
@@ -460,9 +470,12 @@ void wspi_lld_receive(WSPIDriver *wspip, const wspi_command_t *cmdp,
                       size_t n, uint8_t *rxbuf) {
 
   /* Wait for previous transfer to complete and QSPI to be idle.*/
-  wspi_lld_sync(wspip);
   while (!wspi_lld_idle_p(wspip)) {
   }
+  wspip->qspi->CR |= QSPI_CR_ABORT;
+  while((wspip->qspi->CR & QSPI_CR_ABORT) != 0U) {
+  }
+  wspi_lld_sync(wspip);
   dmaStreamDisable(wspip->dma);
   wspip->qspi->CR &= ~QSPI_CR_DMAEN;
 

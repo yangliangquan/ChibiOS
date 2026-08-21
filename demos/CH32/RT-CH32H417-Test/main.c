@@ -312,7 +312,6 @@ sdio_done:
 
 /* QSPI Flash commands (W25Qxx series). */
 #define QSPI_CMD_JEDEC_ID         0x9FU
-#define QSPI_CMD_READ_SR1         0x05U
 #define QSPI_CMD_WRITE_ENABLE     0x06U
 #define QSPI_CMD_WRITE_DISABLE    0x04U
 #define QSPI_CMD_SECTOR_ERASE     0x20U
@@ -321,6 +320,10 @@ sdio_done:
 #define QSPI_CMD_FAST_READ_QUAD   0xEBU
 #define QSPI_CMD_ENABLE_RESET     0x66U
 #define QSPI_CMD_RESET_DEVICE     0x99U
+#define QSPI_CMD_READ_SR1         0x05U
+#define QSPI_CMD_READ_SR2         0x35U
+#define QSPI_CMD_WRITE_SR1        0x01U
+#define QSPI_CMD_WRITE_SR2        0x31U
 
 /*
  * WSPI2 configuration for dual QSPI flash on CH32H417 board:
@@ -405,18 +408,20 @@ static void wspi_test_one_flash(BaseSequentialStream *chp,
     }
   }
 
-  /* Enable Quad mode (SR1 bit 1 = QE). */
+  /* Enable Quad mode (QE bit). For W25Q64JV-family the QE bit is SR2 bit 1
+     (0x02): read SR2 (0x35), set the bit, then WRSR2 (0x31) after a WRITE
+     ENABLE. Some flash parts ship with QE cleared by default. */
   {
-    uint8_t sr1 = 0;
+    uint8_t sr2 = 0;
     cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
                 WSPI_CFG_ADDR_MODE_NONE |
                 WSPI_CFG_DATA_MODE_ONE_LINE;
-    cmd.cmd   = 0x35;
+    cmd.cmd   = QSPI_CMD_READ_SR2;
     cmd.addr  = 0U;
     cmd.alt   = 0U;
     cmd.dummy = 0U;
-    wspiReceive(&WSPID2, &cmd, 1, &sr1);
-    chprintf(chp, "wspi: SR1 = 0x%02x\r\n", sr1);
+    wspiReceive(&WSPID2, &cmd, 1, &sr2);
+    chprintf(chp, "wspi: SR2 = 0x%02x\r\n", sr2);
 
     cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
                 WSPI_CFG_ADDR_MODE_NONE |
@@ -427,19 +432,19 @@ static void wspi_test_one_flash(BaseSequentialStream *chp,
     cmd.dummy = 0U;
     wspiCommand(&WSPID2, &cmd);
 
-    sr1 |= 0x02U;
+    sr2 |= 0x02U;
     cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
                 WSPI_CFG_ADDR_MODE_NONE |
                 WSPI_CFG_DATA_MODE_ONE_LINE;
-    cmd.cmd   = 0x31U;  /* Write Status Register 1 */
+    cmd.cmd   = QSPI_CMD_WRITE_SR2;
     cmd.addr  = 0U;
     cmd.alt   = 0U;
     cmd.dummy = 0U;
     {
-      uint8_t wr = sr1;
+      uint8_t wr = sr2;
       wspiSend(&WSPID2, &cmd, 1, &wr);
     }
-    chprintf(chp, "wspi: SR1 written = 0x%02x\r\n", sr1);
+    chprintf(chp, "wspi: SR2 written = 0x%02x\r\n", sr2);
   }
 
   /* 1-line fast read. */
@@ -613,6 +618,253 @@ static void wspi_test_one_flash(BaseSequentialStream *chp,
   chprintf(chp, "wspi: driver stopped\r\n");
 }
 
+/*===========================================================================*/
+/* Dual flash (DFM) test.                                                    */
+/*                                                                           */
+/* Two W25Qxx flashes share QSPI2:                                          */
+/*   Primary   : NCS0 + SIO0-3 (CS=PF1, IO0=PF2, IO1=PF9, IO2=PF10,IO3=PE15) */
+/*   Secondary : NCS1 + SIOX0-3 (CSXN=PC1, IOX0=PC2, IOX1=PC3,              */
+/*                IOX2=PB13, IOX3=PB14)                                     */
+/* With DFM enabled the QSPI drives both flashes in parallel (shared SCK/   */
+/* command/address, data carried together by SIO0-3 + SIOX0-3) exposing them*/
+/* as a single logical memory. Reading back the same logical region through */
+/* the same DFM path yields the logical bytes that were written, which is   */
+/* what this test verifies.                                                 */
+/*===========================================================================*/
+
+/* Dual-flash configuration: DFM enabled, fselect ignored (hardware drives  */
+/* both chip selects). Everything else identical to the single-flash cfgs.  */
+static const WSPIConfig wspi2_dual_cfg = {
+  .end_cb         = NULL,
+  .error_cb       = NULL,
+  .prescaler      = 1,
+  .ckmode         = 0,
+  .cshtime        = 7,
+  .fsize          = 20,   /* 2^(22+1) = 1MB per flash */
+  .fifo_threshold = 0,
+  .fselect        = 0,    /* both chips selected in DFM */
+  .dfm            = 1     /* dual-flash mode */
+};
+
+#define DUAL_TEST_ADDR    0x000200U
+#define DUAL_TEST_LEN     128U  /* logical bytes, distributed over both chips */
+
+/* Single-flash pass that resets a chip and ensures Quad mode (QE) is
+   enabled before the DFM quad operations. In DFM the two chips share the
+   bus, so this must be done individually on each bank (single-flash mode)
+   before starting the dual-flash driver.
+   QE bit: W25Q64JV-family = SR2 bit1 (0x02); read SR2 (0x35), set bit,
+   then WRSR2 (0x31) after WRITE ENABLE (0x06). */
+static void wspi_dual_enable_quad(BaseSequentialStream *chp,
+                                  const WSPIConfig *cfg,
+                                  const char *label) {
+  wspi_command_t cmd;
+  uint8_t sr2;
+
+  wspiStart(&WSPID2, cfg);
+  chprintf(chp, "wspi: [dual] %s: checking Quad mode\r\n", label);
+
+  /* Reset flash. */
+  cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_NONE |
+              WSPI_CFG_DATA_MODE_NONE;
+  cmd.cmd   = QSPI_CMD_ENABLE_RESET;
+  cmd.addr  = 0U;
+  cmd.alt   = 0U;
+  cmd.dummy = 0U;
+  wspiCommand(&WSPID2, &cmd);
+  cmd.cmd = QSPI_CMD_RESET_DEVICE;
+  wspiCommand(&WSPID2, &cmd);
+  chThdSleepMilliseconds(10);
+
+  /* Read SR2. */
+  cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_NONE |
+              WSPI_CFG_DATA_MODE_ONE_LINE;
+  cmd.cmd   = QSPI_CMD_READ_SR2;
+  cmd.addr  = 0U;
+  cmd.alt   = 0U;
+  cmd.dummy = 0U;
+  wspiReceive(&WSPID2, &cmd, 1, &sr2);
+  chprintf(chp, "wspi: [dual] %s: SR2 = 0x%02x\r\n", label, sr2);
+
+  if ((sr2 & 0x02U) == 0U) {
+    /* QE not set: WRITE ENABLE followed by WRSR2 with QE bit set. */
+    cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+                WSPI_CFG_ADDR_MODE_NONE |
+                WSPI_CFG_DATA_MODE_NONE;
+    cmd.cmd   = QSPI_CMD_WRITE_ENABLE;
+    cmd.addr  = 0U;
+    cmd.alt   = 0U;
+    cmd.dummy = 0U;
+    wspiCommand(&WSPID2, &cmd);
+
+    sr2 |= 0x02U;
+    cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+                WSPI_CFG_ADDR_MODE_NONE |
+                WSPI_CFG_DATA_MODE_ONE_LINE;
+    cmd.cmd   = QSPI_CMD_WRITE_SR2;
+    cmd.addr  = 0U;
+    cmd.alt   = 0U;
+    cmd.dummy = 0U;
+    wspiSend(&WSPID2, &cmd, 1, &sr2);
+    chThdSleepMilliseconds(10);
+
+    /* Verify. */
+    wspiReceive(&WSPID2, &cmd, 1, &sr2);
+    chprintf(chp, "wspi: [dual] %s: SR2 after enable = 0x%02x\r\n",
+             label, sr2);
+  }
+  else {
+    chprintf(chp, "wspi: [dual] %s: QE already enabled\r\n", label);
+  }
+
+  wspiStop(&WSPID2);
+}
+
+static void wspi_test_dual_flash(BaseSequentialStream *chp) {
+  wspi_command_t cmd;
+  uint8_t wr_buf[DUAL_TEST_LEN];
+  uint8_t rd_buf[DUAL_TEST_LEN];
+  uint32_t i;
+
+  chprintf(chp, "wspi: --- DUAL flash (DFM) test ---\r\n");
+
+  /* Some W25Qxx variants boot with Quad mode disabled, so before using the
+     DFM quad bus, make sure the QE status-register bit is set on each bank
+     through an individual single-flash pass. */
+  wspi_dual_enable_quad(chp, &wspi2_pri_cfg, "PRIMARY (NCS0)");
+  wspi_dual_enable_quad(chp, &wspi2_sec_cfg, "SECONDARY (NCS1)");
+
+  /* Start driver in dual-flash mode. */
+  wspiStart(&WSPID2, &wspi2_dual_cfg);
+  chprintf(chp, "wspi: driver started (DFM enabled)\r\n");
+
+  /* Reset both flashes. */
+  cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_NONE |
+              WSPI_CFG_DATA_MODE_NONE;
+  cmd.cmd   = QSPI_CMD_ENABLE_RESET;
+  cmd.addr  = 0U;
+  cmd.alt   = 0U;
+  cmd.dummy = 0U;
+  wspiCommand(&WSPID2, &cmd);
+  chThdSleepMilliseconds(10);
+  cmd.cmd = QSPI_CMD_RESET_DEVICE;
+  wspiCommand(&WSPID2, &cmd);
+  chThdSleepMilliseconds(10);
+
+  /* JEDEC ID through DFM. Both chips reply with the same ID (identical      */
+  /* W25Qxx), so the returned stream repeats the shared ID bytes.           */
+  {
+    uint8_t id_buf[3] = {0, 0, 0};
+    cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+                WSPI_CFG_ADDR_MODE_NONE |
+                WSPI_CFG_DATA_MODE_ONE_LINE;
+    cmd.cmd   = QSPI_CMD_JEDEC_ID;
+    cmd.addr  = 0U;
+    cmd.alt   = 0U;
+    cmd.dummy = 0U;
+    wspiReceive(&WSPID2, &cmd, 3, id_buf);
+    chprintf(chp, "wspi: [dual] JEDEC ID = %02x %02x %02x\r\n",
+             id_buf[0], id_buf[1], id_buf[2]);
+    if (id_buf[0] == 0x00 || id_buf[0] == 0xFF) {
+      chprintf(chp, "wspi: [dual] WARNING - no flash detected on DFM bus\r\n");
+    }
+  }
+
+  /* Prepare data pattern. */
+  for (i = 0; i < DUAL_TEST_LEN; i++) {
+    wr_buf[i] = (uint8_t)(0x40U + i);
+  }
+
+  /* Write enable. */
+  cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_NONE |
+              WSPI_CFG_DATA_MODE_NONE;
+  cmd.cmd   = QSPI_CMD_WRITE_ENABLE;
+  cmd.addr  = 0U;
+  cmd.alt   = 0U;
+  cmd.dummy = 0U;
+  wspiCommand(&WSPID2, &cmd);
+
+  /* Sector erase at the test address (address sent to both flashes). */
+  chprintf(chp, "wspi: [dual] sector erase at 0x%06x...\r\n", DUAL_TEST_ADDR);
+  cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_ONE_LINE |
+              WSPI_CFG_DATA_MODE_NONE |
+              WSPI_CFG_ADDR_SIZE_24;
+  cmd.cmd   = QSPI_CMD_SECTOR_ERASE;
+  cmd.addr  = DUAL_TEST_ADDR;
+  cmd.alt   = 0U;
+  cmd.dummy = 0U;
+  wspiCommand(&WSPID2, &cmd);
+  chThdSleepMilliseconds(50);
+
+  /* Write enable. */
+  cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_NONE |
+              WSPI_CFG_DATA_MODE_NONE;
+  cmd.cmd   = QSPI_CMD_WRITE_ENABLE;
+  cmd.addr  = 0U;
+  cmd.alt   = 0U;
+  cmd.dummy = 0U;
+  wspiCommand(&WSPID2, &cmd);
+
+  /* Quad page program: data carried over SIO0-3 + SIOX0-3 in DFM. */
+  chprintf(chp, "wspi: [dual] writing %u bytes...\r\n", DUAL_TEST_LEN);
+  cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_ONE_LINE |
+              WSPI_CFG_DATA_MODE_FOUR_LINES |
+              WSPI_CFG_ADDR_SIZE_24;
+  cmd.cmd   = 0x32U;  /* Quad Page Program */
+  cmd.addr  = DUAL_TEST_ADDR;
+  cmd.alt   = 0U;
+  cmd.dummy = 0U;
+  wspiSend(&WSPID2, &cmd, DUAL_TEST_LEN, wr_buf);
+  chThdSleepMilliseconds(50);
+
+  /* Quad read back. */
+  memset(rd_buf, 0, sizeof(rd_buf));
+  cmd.cfg   = WSPI_CFG_CMD_MODE_ONE_LINE |
+              WSPI_CFG_ADDR_MODE_FOUR_LINES |
+              WSPI_CFG_DATA_MODE_FOUR_LINES |
+              WSPI_CFG_ADDR_SIZE_24;
+  cmd.cmd   = QSPI_CMD_FAST_READ_QUAD;
+  cmd.addr  = DUAL_TEST_ADDR;
+  cmd.alt   = 0U;
+  cmd.dummy = 6U;
+  wspiReceive(&WSPID2, &cmd, DUAL_TEST_LEN, rd_buf);
+
+  /* Verify. */
+  chprintf(chp, "wspi: [dual] read-back:");
+  for (i = 0; i < DUAL_TEST_LEN; i++) {
+    chprintf(chp, " %02x", rd_buf[i]);
+  }
+  chprintf(chp, "\r\n");
+
+  if (memcmp(wr_buf, rd_buf, DUAL_TEST_LEN) == 0) {
+    chprintf(chp, "wspi: [dual] write+verify PASSED (%u bytes match)\r\n",
+             DUAL_TEST_LEN);
+  }
+  else {
+    for (i = 0; i < DUAL_TEST_LEN; i++) {
+      if (wr_buf[i] != rd_buf[i]) {
+        break;
+      }
+    }
+    chprintf(chp, "wspi: [dual] write+verify FAILED at offset %u"
+             " (expected 0x%02x, got 0x%02x)\r\n",
+             i, wr_buf[i], rd_buf[i]);
+  }
+
+  #undef DUAL_TEST_ADDR
+  #undef DUAL_TEST_LEN
+
+  wspiStop(&WSPID2);
+  chprintf(chp, "wspi: driver stopped\r\n");
+}
+
 static void cmd_wspi(BaseSequentialStream *chp, int argc, char *argv[]) {
   (void)argc;
   (void)argv;
@@ -648,6 +900,11 @@ static void cmd_wspi(BaseSequentialStream *chp, int argc, char *argv[]) {
   /* 3. Test secondary flash (NCS1).                                      */
   /*----------------------------------------------------------------------*/
   wspi_test_one_flash(chp, &wspi2_sec_cfg, "SECONDARY flash (NCS1)");
+
+  /*----------------------------------------------------------------------*/
+  /* 4. Dual-flash (DFM) test - both flashes accessed in parallel.        */
+  /*----------------------------------------------------------------------*/
+  wspi_test_dual_flash(chp);
 
   chprintf(chp, "wspi: all tests complete\r\n");
 }
