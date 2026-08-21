@@ -288,6 +288,83 @@ void wspi_lld_stop(WSPIDriver *wspip) {
 }
 
 /**
+ * @brief   Enables or disables the dual-flash mode.
+ * @details  The QSPI peripheral is temporarily disabled to allow the
+ *           modification of the DFM bit, then re-enabled.
+ *           Note: this resets the peripheral state, so it must be
+ *           reconfigured before use if needed.
+ *
+ * @param[in] wspip     pointer to the @p WSPIDriver object
+ * @param[in] enable    @p true to enable dual-flash mode, @p false to disable
+ *
+ * @notapi
+ */
+void wspi_lld_set_dual_flash(WSPIDriver *wspip, bool enable) {
+
+  osalDbgCheck(wspip != NULL);
+
+  /* Abort any ongoing transfer and wait for idle.*/
+  wspip->qspi->CR |= QSPI_CR_ABORT;
+  while ((wspip->qspi->CR & QSPI_CR_ABORT) != 0U) {
+  }
+  while ((wspip->qspi->SR & QSPI_SR_IDLEF) == 0U) {
+  }
+
+  /* Clear all flags.*/
+  wspip->qspi->FCR = QSPI_FCR_CTEF | QSPI_FCR_CTCF |
+                     QSPI_FCR_CSMF | QSPI_FCR_CTOF;
+
+  if (enable) {
+    wspip->qspi->CR |= QSPI_CR_DFM;
+  }
+  else {
+    wspip->qspi->CR &= ~QSPI_CR_DFM;
+  }
+
+  /* Re-enable QSPI.*/
+  wspip->qspi->CR |= QSPI_CR_EN;
+}
+
+/**
+ * @brief   Selects the flash device to be accessed.
+ * @details  The QSPI peripheral is temporarily disabled to allow the
+ *           modification of the FSEL bit, then re-enabled.
+ *           Note: this resets the peripheral state, so it must be
+ *           reconfigured before use if needed.
+ *
+ * @param[in] wspip     pointer to the @p WSPIDriver object
+ * @param[in] fselect   flash select value, 0=NCS0 (primary),
+ *                      1=NCS1 (secondary)
+ *
+ * @notapi
+ */
+void wspi_lld_select_flash(WSPIDriver *wspip, uint8_t fselect) {
+
+  osalDbgCheck(wspip != NULL);
+
+  /* Abort any ongoing transfer and wait for idle.*/
+  wspip->qspi->CR |= QSPI_CR_ABORT;
+  while ((wspip->qspi->CR & QSPI_CR_ABORT) != 0U) {
+  }
+  while ((wspip->qspi->SR & QSPI_SR_IDLEF) == 0U) {
+  }
+
+  /* Clear all flags.*/
+  wspip->qspi->FCR = QSPI_FCR_CTEF | QSPI_FCR_CTCF |
+                     QSPI_FCR_CSMF | QSPI_FCR_CTOF;
+
+  if (fselect != 0U) {
+    wspip->qspi->CR |= QSPI_CR_FSEL;
+  }
+  else {
+    wspip->qspi->CR &= ~QSPI_CR_FSEL;
+  }
+
+  /* Re-enable QSPI.*/
+  wspip->qspi->CR |= QSPI_CR_EN;
+}
+
+/**
  * @brief   Sends a command without data phase.
  * @post    At the end of the operation the configured callback is invoked.
  *

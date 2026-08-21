@@ -332,6 +332,8 @@ extern "C" {
                      size_t n, const uint8_t *txbuf);
   void wspi_lld_receive(WSPIDriver *wspip, const wspi_command_t *cmdp,
                         size_t n, uint8_t *rxbuf);
+  void wspi_lld_set_dual_flash(WSPIDriver *wspip, bool enable);
+  void wspi_lld_select_flash(WSPIDriver *wspip, uint8_t fselect);
 #if WSPI_SUPPORTS_MEMMAP == TRUE
   void wspi_lld_map_flash(WSPIDriver *wspip,
                           const wspi_command_t *cmdp,

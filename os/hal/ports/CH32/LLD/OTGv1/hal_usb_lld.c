@@ -70,6 +70,28 @@ static ALIGNED_VAR(4) uint8_t ep0setup_buffer[64];
 
 static ALIGNED_VAR(4) uint8_t ep_txdma_bouncebuffer[USB_MAX_ENDPOINTS][64];
 
+#define USBFS_DMA_SRAM_BASE      0x20000000U
+#define USBFS_DMA_SRAM_END       0x20200000U
+
+/*
+ * Return the DMA source address for an IN (transmit) transfer.
+ * If the source buffer is not in DMA-accessible SRAM (e.g. a const
+ * descriptor inside internal/external flash) or is not 4-byte aligned,
+ * the data is copied into the per-endpoint SRAM bounce buffer and that
+ * buffer's address is returned instead.
+ * @note The bounce buffer holds at most one max-size packet (64B).
+ */
+static uint32_t usb_lld_tx_dma_addr(const uint8_t *buf, size_t n, uint8_t ep)
+{
+  uint32_t a = (uint32_t)buf;
+
+  if ((a < USBFS_DMA_SRAM_BASE) || (a >= USBFS_DMA_SRAM_END) || (a & 0x3U)) {
+    memcpy(ep_txdma_bouncebuffer[ep], buf, n);
+    return (uint32_t)ep_txdma_bouncebuffer[ep];
+  }
+  return a;
+}
+
 /**
  * @brief   EP0 initialization structure.
  */
@@ -180,16 +202,10 @@ static void usb_serve_endpoints(USBDriver *usbp, uint8_t intst)
       iesp->txlast = (remaining < usbp->epc[ep]->in_maxsize) ?
                       remaining : usbp->epc[ep]->in_maxsize;
 
-      //When the address is not 4-byte aligned
-      //Tx buffer is actually at rigister content + 64
-      if((uint32_t)(iesp->txbuf) & 0x3)
-      {
-        memcpy(ep_txdma_bouncebuffer[ep], iesp->txbuf, iesp->txlast);
-        *dma_reg = (uint32_t)(ep_txdma_bouncebuffer[ep]);
-      }
-      else{
-        *dma_reg = (uint32_t)(iesp->txbuf + iesp->txcnt);
-      }
+      /* The USB DMA can only access SRAM, bounce anything that is in
+         flash (const descriptors) or not 4-byte aligned. */
+      *dma_reg = usb_lld_tx_dma_addr(iesp->txbuf + iesp->txcnt,
+                                     iesp->txlast, (uint8_t)ep);
 
       *txlen_reg = (uint16_t)iesp->txlast;
       if (ep == 0) {
@@ -335,6 +351,9 @@ static void usb_lld_clock_enable(void)
   RCC->CFGR2 |= RCC_USBFSSRC_USBHSPLL;
   RCC->CFGR2 &= ~RCC_USBFSDIV;
   RCC->CFGR2 |= RCC_USBFSDIV_DIV10;
+
+  RCC->HBRSTR |= RCC_USBOTGRST;
+  RCC->HBRSTR &= ~RCC_USBOTGRST;
 
   /* Enable OTG_FS peripheral clock (HB bus) */
   RCC->HBPCENR |= RCC_USBOTGEN;
@@ -884,21 +903,12 @@ void usb_lld_start_in(USBDriver *usbp, usbep_t ep)
   }
 
 
-  /* Set DMA address, length, and enable transmission */
-  if(ep_num == 0){
-    *dma_reg = (uint32_t)(isp->txbuf + isp->txcnt);
-  }
-  else{
-    if((uint32_t)(isp->txbuf) & 0x3)
-    {
-      memcpy(ep_txdma_bouncebuffer[ep_num], isp->txbuf, isp->txlast);
-      *dma_reg = (uint32_t)(ep_txdma_bouncebuffer[ep_num]);
-    }
-    else{
-      *dma_reg = (uint32_t)(isp->txbuf + isp->txcnt);
-    }
-  }
-  *dma_reg = (uint32_t)(isp->txbuf + isp->txcnt);
+  /* Set DMA address, length, and enable transmission.
+     The USB DMA can only access SRAM, so const descriptors stored in
+     flash (get_descriptor) are bounced into SRAM first. This is required
+     on EP0 as well (the device/configuration descriptors live in flash). */
+  *dma_reg = usb_lld_tx_dma_addr(isp->txbuf + isp->txcnt,
+                                 isp->txlast, ep_num);
   *txlen_reg = (uint16_t)isp->txlast;
   *txctlr_reg = (*txctlr_reg & ~USBFS_UEP_T_RES_MASK) | USBFS_UEP_T_RES_ACK;
 }
