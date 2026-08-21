@@ -1,5 +1,4 @@
 # List of all the CH32H417 V3F platform files.
-ifeq ($(USE_SMART_BUILD),yes)
 
 # Configuration files directory
 ifeq ($(CONFDIR),)
@@ -8,6 +7,46 @@ endif
 
 HALCONF := $(strip $(shell cat $(CONFDIR)/halconf.h | egrep -e "\#define"))
 MCUCONF := $(strip $(shell cat $(CONFDIR)/mcuconf.h | egrep -e "\#define"))
+
+# Required include directories.
+
+# Select SDMMC or SDIO LLD include path
+ifneq ($(findstring CH32_SDC_USE_SDIO TRUE,$(MCUCONF)),)
+CH32_SDC_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1
+else
+CH32_SDC_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1
+endif
+
+# Select USBHS or OTG LLD include path
+ifneq ($(findstring CH32_OTG_USE_USB1 TRUE,$(MCUCONF)),)
+CH32_USB_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1
+else
+CH32_USB_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1
+endif
+
+PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
+              ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/ADCv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/CANv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/CRYPv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/DACv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/EFLv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/TIMv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/I2Cv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/SPIv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/MACv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/GPIOv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/RNGv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1 \
+              $(CH32_SDC_LLDINC) \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1 \
+              $(CH32_USB_LLDINC)
+
+# Optional or full set of platform files.
+ifeq ($(USE_SMART_BUILD),yes)
 
 PLATFORMSRC := ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f/hal_st_lld.c
@@ -87,14 +126,6 @@ ifneq ($(findstring HAL_USE_WSPI TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1/hal_wspi_lld.c
 endif
 else
-# Configuration files directory
-ifeq ($(CONFDIR),)
-  CONFDIR = .
-endif
-
-HALCONF := $(strip $(shell cat $(CONFDIR)/halconf.h | egrep -e "\#define"))
-MCUCONF := $(strip $(shell cat $(CONFDIR)/mcuconf.h | egrep -e "\#define"))
-
 # Select SDMMC or SDIO LLD src path
 ifneq ($(findstring CH32_SDC_USE_SDIO TRUE,$(MCUCONF)),)
 CH32_SDC_SRC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1/hal_sdc_lld.c
@@ -134,43 +165,6 @@ PLATFORMSRC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c \
               $(CH32_USB_SRC)\
               ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1/hal_wdg_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1/hal_wspi_lld.c
-
-# Required include directories
-
-# Select SDMMC or SDIO LLD include path
-ifneq ($(findstring CH32_SDC_USE_SDIO TRUE,$(MCUCONF)),)
-CH32_SDC_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1
-else
-CH32_SDC_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1
-endif
-
-# Select USBHS or OTG LLD src path
-ifneq ($(findstring CH32_OTG_USE_USB1 TRUE,$(MCUCONF)),)
-CH32_USB_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1
-else
-CH32_USB_LLDINC = ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1
-endif
-
-PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
-              ${CHIBIOS}/os/hal/ports/CH32/CH32H417/LLD/STv3f \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/DMAv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/ADCv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/CANv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/CRYPv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/DACv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/EFLv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/TIMv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/I2Cv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/SPIv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/MACv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/GPIOv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/RNGv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1 \
-              $(CH32_SDC_LLDINC) \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1 \
-              $(CH32_USB_LLDINC)
 
 endif
 # Shared variables
