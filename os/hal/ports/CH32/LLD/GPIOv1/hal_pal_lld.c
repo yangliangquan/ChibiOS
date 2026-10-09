@@ -288,6 +288,7 @@ void _pal_lld_enablepadevent(ioportid_t port, uint8_t pad, ioeventmode_t mode)
 }
 void _pal_lld_disablepadevent(ioportid_t port, uint8_t pad)
 {
+    (void)port;
     EXTI->INTENR &= ~(1 << pad);
     EXTI->RTENR &= ~(1 << pad);
     EXTI->FTENR &= ~(1 << pad);
