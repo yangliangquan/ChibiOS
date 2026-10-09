@@ -51,7 +51,7 @@ ifneq ($(findstring HAL_USE_RTC TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1/hal_rtc_lld.c
 endif
 ifneq ($(findstring HAL_USE_SDC TRUE,$(HALCONF)),)
-PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1/hal_sdc_lld.c
+PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1/hal_sdc_lld.c
 endif
 ifneq ($(findstring HAL_USE_SERIAL TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_serial_lld.c
@@ -94,7 +94,7 @@ PLATFORMSRC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/GPIOv1/hal_pal_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/TIMv1/hal_pwm_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1/hal_rtc_lld.c \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1/hal_sdc_lld.c \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1/hal_sdc_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_serial_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_sio_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/SPIv1/hal_spi_lld.c \
@@ -121,7 +121,7 @@ PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/GPIOv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RNGv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/SDMMCv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \

@@ -327,6 +327,18 @@ void i2c_lld_stop(I2CDriver *i2cp) {
   /* Does nothing.*/
   (void)i2cp;
 }
+/**
+ * @brief   Deactivates the I2C peripheral but keeps clock and peripheral on.
+ *
+ * @param[in] i2cp      pointer to the @p I2CDriver object
+ *
+ * @notapi
+ */
+void i2c_lld_soft_stop(I2CDriver *i2cp) {
+  /* the fallback driver has nothing to do */
+  (void)i2cp;
+}
+
 
 /**
  * @brief   Receives data via the I2C bus as master.

@@ -177,6 +177,7 @@ DRESULT disk_ioctl (
   return RES_PARERR;
 }
 
+#if !defined(CH32H417) || defined(__DOXYGEN__)
 DWORD get_fattime(void) {
 #if HAL_USE_RTC
   RTCDateTime timespec;
@@ -187,3 +188,4 @@ DWORD get_fattime(void) {
   return ((uint32_t)0 | (1 << 16)) | (1 << 21); /* wrong but valid time */
 #endif
 }
+#endif

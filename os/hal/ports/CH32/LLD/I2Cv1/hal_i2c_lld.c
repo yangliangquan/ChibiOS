@@ -654,6 +654,32 @@ void i2c_lld_stop(I2CDriver *i2cp) {
 }
 
 /**
+ * @brief   Deactivates the I2C peripheral but keeps the clock and the
+ *          peripheral enabled.
+ *
+ * @param[in] i2cp      pointer to the @p I2CDriver object
+ *
+ * @notapi
+ */
+void i2c_lld_soft_stop(I2CDriver *i2cp) {
+
+  if (i2cp->state != I2C_STOP) {
+
+    /* Disable I2C peripheral but stay owned (no clock gate off, no
+       NVIC disable, no port reset).*/
+    i2cp->i2c->CTLR1 &= ~I2C_CTLR1_PE;
+    i2cp->i2c->CTLR1 = 0;
+    i2cp->i2c->CTLR2 = 0;
+
+    /* Free DMA streams;*/
+    dmaStreamFreeI(i2cp->dmarx);
+    dmaStreamFreeI(i2cp->dmatx);
+    i2cp->dmarx = NULL;
+    i2cp->dmatx = NULL;
+  }
+}
+
+/**
  * @brief   Receives data via the I2C bus as master.
  *
  * @param[in] i2cp      pointer to the @p I2CDriver object

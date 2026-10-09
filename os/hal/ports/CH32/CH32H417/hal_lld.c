@@ -342,6 +342,20 @@ void RCC_GetClocksFreq(RCC_ClocksTypeDef *RCC_Clocks) {
  * @notapi
  */
 bool hal_lld_clock_switch_mode(const halclkcfg_t *ccp) {
+  /* Applications running in place from the external flash window must
+     never switch the system clock: the clock tree (SYSCLK, HPRE, FPRE)
+     belongs to the bootloader, which has configured it before enabling
+     the QSPI2 memory-mapped window and jumping here. Changing SYSCLK
+     while executing from the window would break instruction fetch. */
+#if defined(CH32_XIP_PROG_BASE)
+  {
+    uintptr_t pc = (uintptr_t)__builtin_return_address(0);
+    if (pc >= CH32_XIP_PROG_BASE) {
+      /* verify-only: the tree is unchanged */
+      return false;
+    }
+  }
+#endif
   __IO uint32_t StartUpCounter = 0;
   __IO uint32_t HSEStatus = 0;
   __IO uint32_t FLASH_Temp = 0;

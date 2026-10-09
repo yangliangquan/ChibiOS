@@ -77,7 +77,9 @@ static const USBEndpointConfig ep0config = {
   DEF_USB_EP0_HS_SIZE,
   DEF_USB_EP0_HS_SIZE,
   &ep0_state.in,
-  &ep0_state.out
+  &ep0_state.out,
+  3,
+  NULL
 };
 
 /*===========================================================================*/

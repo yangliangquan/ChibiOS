@@ -408,6 +408,8 @@ void pwm_lld_start(PWMDriver *pwmp) {
   RCC_ClocksTypeDef RCC_Clocks;
   RCC_GetClocksFreq(&RCC_Clocks);
   uint32_t clock = RCC_Clocks.HCLK_Frequency;
+  /* expose the timer base clock the way upstream AP code looks for it */
+  pwmp->clock = clock;
   if (pwmp->state == PWM_STOP) {
     /* Clock activation and timer reset.*/
 #if CH32_PWM_USE_TIM1 == TRUE

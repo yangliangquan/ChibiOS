@@ -189,6 +189,14 @@ typedef struct {
    * @details This structure maintains the state of the OUT endpoint.
    */
   USBOutEndpointState           *out_state;
+
+  /* Buffer mode (upstream-compatible): number of buffers the endpoint is
+     capable of using, used only by vendor mode. */
+  uint8_t                       buffers;
+
+  /* Setup packets buffer for the endpoint (used only by EP0). */
+  uint8_t                       *setup_buf;
+
   /* End of the mandatory fields.*/
 } USBEndpointConfig;
 

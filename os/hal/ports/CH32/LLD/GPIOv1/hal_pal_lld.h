@@ -472,7 +472,14 @@ typedef uint32_t iopadid_t;
 #define pal_lld_writepad(port, pad, bit)                                                                               \
     do                                                                                                                 \
     {                                                                                                                  \
-        (bit) == PAL_LOW ? pal_lld_clearpad(port, pad) : pal_lld_setpad(port, pad);                                    \
+        if ((bit) == PAL_LOW)                                                                                          \
+        {                                                                                                              \
+            pal_lld_clearport(port, PAL_PORT_BIT(pad));                                                                 \
+        }                                                                                                              \
+        else                                                                                                           \
+        {                                                                                                              \
+            pal_lld_setport(port, PAL_PORT_BIT(pad));                                                                   \
+        }                                                                                                              \
     } while (false)
 
 /**

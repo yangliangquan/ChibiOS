@@ -468,7 +468,8 @@ typedef void (*ch32_dmaisr_t)(void *p, uint32_t flags);
 /**
  * @brief   CH32 DMA stream descriptor structure.
  */
-typedef struct {
+typedef struct ch32_dma_stream ch32_dma_stream_t;
+struct ch32_dma_stream {
   DMA_TypeDef           *dma;           /**< @brief Associated DMA.         */
   DMA_Channel_TypeDef   *channel;       /**< @brief Associated DMA channel. */
   uint32_t              cmask;          /**< @brief Mask of streams sharing
@@ -484,7 +485,7 @@ typedef struct {
                                              and CSELR registers.           */
   uint8_t               selfindex;      /**< @brief Index to self in array. */
   uint8_t               vector;         /**< @brief Associated IRQ vector.  */
-} ch32_dma_stream_t;
+};
 
 /*===========================================================================*/
 /* Driver macros.                                                            */

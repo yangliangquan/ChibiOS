@@ -357,6 +357,9 @@ struct PWMDriver {
    * @brief Driver state.
    */
   pwmstate_t                state;
+  /* base timer clock in Hz, populated in pwm_lld_start() so upstream
+     AP code (RCOutput) can compute prescalers */
+  uint32_t                  clock;
   /**
    * @brief Current driver configuration data.
    */

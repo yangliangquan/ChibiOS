@@ -95,7 +95,9 @@ static const SerialConfig default_config = {
   SERIAL_DEFAULT_BITRATE,
   0,
   USART_CTLR2_STOP1_BITS,
-  0
+  0,
+  NULL,
+  NULL
 };
 
 /*===========================================================================*/
@@ -444,6 +446,8 @@ void sd_lld_start(SerialDriver *sdp, const SerialConfig *config) {
     config = &default_config;
   }
 
+  sdp->config = config;
+
   if (sdp->state == SD_STOP) {
 #if CH32_SERIAL_USE_USART1
     if (&SD1 == sdp) {
@@ -668,6 +672,7 @@ void sd_lld_serve_interrupt(SerialDriver *sdp) {
 
   /* Writing CTLR1 once.*/
   u->CTLR1 = cr1;
+  _serial_irq_code(sdp);
 }
 
 #endif /* HAL_USE_SERIAL == TRUE */
