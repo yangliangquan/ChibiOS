@@ -346,7 +346,18 @@ bool hal_lld_clock_switch_mode(const halclkcfg_t *ccp) {
      never switch the system clock: the clock tree (SYSCLK, HPRE, FPRE)
      belongs to the bootloader, which has configured it before enabling
      the QSPI2 memory-mapped window and jumping here. Changing SYSCLK
-     while executing from the window would break instruction fetch. */
+     while executing from the window would break instruction fetch.
+     HAL_XIP_ENABLED is set by the ArduPilot hwdef generator for exactly
+     these builds, so make the whole switch a no-op there: "running from
+     the window" is a property of the image, not of where this particular
+     function happens to be linked. HAL_FORCE_CLOCK_INIT overrides it the
+     same way it does for the board initialization code. */
+#if defined(HAL_XIP_ENABLED) && !defined(HAL_FORCE_CLOCK_INIT)
+  if (HAL_XIP_ENABLED) {
+    /* verify-only: the tree is unchanged */
+    return false;
+  }
+#endif
 #if defined(CH32_XIP_PROG_BASE)
   {
     uintptr_t pc = (uintptr_t)__builtin_return_address(0);
