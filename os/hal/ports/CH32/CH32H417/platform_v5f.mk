@@ -69,7 +69,7 @@ ifneq ($(findstring HAL_USE_UART TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_uart_lld.c
 endif
 ifneq ($(findstring HAL_USE_USB TRUE,$(HALCONF)),)
-PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1/hal_usb_lld.c
+PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1/hal_usb_lld.c
 endif
 ifneq ($(findstring HAL_USE_WDG TRUE,$(HALCONF)),)
 PLATFORMSRC += ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1/hal_wdg_lld.c
@@ -100,7 +100,7 @@ PLATFORMSRC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417/hal_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/SPIv1/hal_spi_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RNGv1/hal_trng_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1/hal_uart_lld.c \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1/hal_usb_lld.c \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1/hal_usb_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1/hal_wdg_lld.c \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1/hal_wspi_lld.c
 endif
@@ -123,7 +123,7 @@ PLATFORMINC = ${CHIBIOS}/os/hal/ports/CH32/CH32H417 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/RTCv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/SDIOv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/USARTv1 \
-              ${CHIBIOS}/os/hal/ports/CH32/LLD/USBv1 \
+              ${CHIBIOS}/os/hal/ports/CH32/LLD/OTGv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/WDGv1 \
               ${CHIBIOS}/os/hal/ports/CH32/LLD/QULDSPIv1
 
