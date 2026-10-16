@@ -49,10 +49,11 @@ SECTIONS
     
     .highcode : 
     {
-        . = ALIGN(4);
+        . = ALIGN(1024);
         PROVIDE(_highcode_vma_start = .);
 		PROVIDE(vector_start = .);
         *(.vector);
+		*(.irq_entry);
 		KEEP(*(SORT_NONE(.vector_handler)))
 		*(.text)
 		*(.text.*)

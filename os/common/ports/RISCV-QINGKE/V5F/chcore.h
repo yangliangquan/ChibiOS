@@ -600,6 +600,7 @@ static inline rtcnt_t port_rt_get_counter_value(void) {
 
 static __attribute__((always_inline)) inline void save_context(void)
 {
+    __asm("fence.i");
     RELOAD_SP(-sizeof(struct port_intctx));
     STORE_REGISTER(1, offsetof(struct port_intctx, x1));
     STORE_REGISTER(5, offsetof(struct port_intctx, x5));
@@ -665,10 +666,12 @@ static __attribute__((always_inline)) inline void save_context(void)
 #endif
     STORE_CSR(mstatus, offsetof(struct port_intctx, mstatus));
     STORE_CSR(mepc, offsetof(struct port_intctx, mepc));
+    __asm("fence.i");
 }
 
 static __attribute__((always_inline)) inline void recover_context(void)
 {
+    __asm("fence.i");
     LOAD_REGISTER(1, offsetof(struct port_intctx, x1));
     LOAD_REGISTER(5, offsetof(struct port_intctx, x5));
     LOAD_REGISTER(6, offsetof(struct port_intctx, x6));
@@ -734,10 +737,12 @@ static __attribute__((always_inline)) inline void recover_context(void)
     LOAD_CSR(mstatus, offsetof(struct port_intctx, mstatus));
     LOAD_CSR(mepc, offsetof(struct port_intctx, mepc));
     RELOAD_SP(sizeof(struct port_intctx));
+    __asm("fence.i");
 }
 
 static __attribute__((always_inline)) inline void save_context_irq(void)
 {
+    __asm("fence.i");
     RELOAD_SP(-sizeof(struct port_extctx));
 // #ifndef HARDWARE_STACK
 //     STORE_REGISTER(1, offsetof(struct port_extctx, x1));
@@ -781,10 +786,12 @@ static __attribute__((always_inline)) inline void save_context_irq(void)
 // #endif
     STORE_CSR(mstatus, offsetof(struct port_extctx, mstatus));
     STORE_CSR(mepc, offsetof(struct port_extctx, mepc));
+    __asm("fence.i");
 }
 
 static __attribute__((always_inline)) inline void recover_context_irq(void)
 {
+    __asm("fence.i");
 // #ifndef HARDWARE_STACK
 //     LOAD_REGISTER(1, offsetof(struct port_extctx, x1));
 //     LOAD_REGISTER(5, offsetof(struct port_extctx, x5));
@@ -828,6 +835,7 @@ static __attribute__((always_inline)) inline void recover_context_irq(void)
     LOAD_CSR(mstatus, offsetof(struct port_extctx, mstatus));
     LOAD_CSR(mepc, offsetof(struct port_extctx, mepc));
     RELOAD_SP(sizeof(struct port_extctx));
+    __asm("fence.i");
 }
 
 static __attribute__((always_inline)) inline void _port_irq_prologue(void)

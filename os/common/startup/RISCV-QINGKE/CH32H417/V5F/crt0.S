@@ -164,9 +164,9 @@ handle_reset:
     li t0, 0x7888           
    	csrw mstatus, t0
     /* Configure the interrupt vector table recognition mode and entry address mode */
-    .extern _port_irq_handler
-    la t0, _port_irq_handler
-    # ori t0, t0, 3           
+    .extern _vector_table
+    la t0, _vector_table
+    ori t0, t0, 3           
 	csrw mtvec, t0
 
 	call swicth_clock_pll70m
