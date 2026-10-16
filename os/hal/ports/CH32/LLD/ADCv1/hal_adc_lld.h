@@ -213,7 +213,8 @@ typedef uint32_t adcerror_t;
 #define adc_lld_driver_fields                                               \
   /* Dummy field, it is not needed.*/                                       \
   ADC_TypeDef               *adcr;                                          \
-  const ch32_dma_stream_t   *dmastp;
+  const ch32_dma_stream_t   *dmastp;                                        \
+  uint32_t                  dmamode;
 /**
  * @brief   Low level fields of the ADC configuration structure.
  */

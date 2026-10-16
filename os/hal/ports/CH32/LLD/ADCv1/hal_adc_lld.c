@@ -249,6 +249,14 @@ void adc_lld_init(void) {
   /* Driver initialization.*/
   adcObjectInit(&ADCD1);
   ADCD1.adcr = ADC1;
+  /* ADC data register -> memory, 16 bits on both sides, memory incrementing,
+     transfer complete and error interrupts enabled. The mode must not come
+     from adcp->config because adcStart() is normally called with a NULL
+     configuration (see AnalogIn), the ADCConfig structure is a dummy on this
+     port.*/
+  ADCD1.dmamode = (CH32_ADC_ADC1_DMA_PRIORITY << 12) |
+                  DMA_CFGR1_PSIZE_0 | DMA_CFGR1_MSIZE_0 |
+                  DMA_CFGR1_MINC | DMA_CFGR1_TEIE | DMA_CFGR1_TCIE;
   NVIC_EnableIRQ(ADC1_2_IRQn);
   resetHB2(RCC_ADC1RST);
 #endif
@@ -257,6 +265,9 @@ void adc_lld_init(void) {
   /* Driver initialization.*/
   adcObjectInit(&ADCD2);
   ADCD2.adcr = ADC2;
+  ADCD2.dmamode = (CH32_ADC_ADC2_DMA_PRIORITY << 12) |
+                  DMA_CFGR1_PSIZE_0 | DMA_CFGR1_MSIZE_0 |
+                  DMA_CFGR1_MINC | DMA_CFGR1_TEIE | DMA_CFGR1_TCIE;
   NVIC_EnableIRQ(ADC1_2_IRQn);
   resetHB2(RCC_ADC2RST);
 #endif
@@ -363,10 +374,20 @@ void adc_lld_stop(ADCDriver *adcp) {
  */
 void adc_lld_start_conversion(ADCDriver *adcp) {
   ADCConversionGroup *grpp;
+  uint32_t mode;
   grpp = (ADCConversionGroup *)(adcp->grpp);
   dmaStreamDisable(adcp->dmastp);
   dmaStreamSetMemory0(adcp->dmastp, adcp->samples);
-  dmaStreamSetMode(adcp->dmastp, adcp->config->dmacfg);
+  mode = adcp->dmamode;
+  if (grpp->circular) {
+    mode |= DMA_CFGR1_CIRC;
+    if (adcp->depth > 1) {
+      /* if circular buffer depth > 1 then the half transfer interrupt is
+         enabled in order to allow streaming processing */
+      mode |= DMA_CFGR1_HTIE;
+    }
+  }
+  dmaStreamSetMode(adcp->dmastp, mode);
   dmaStreamSetTransactionSize(adcp->dmastp, (uint32_t)grpp->num_channels * (uint32_t)adcp->depth);
   dmaStreamEnable(adcp->dmastp);
   NVIC_EnableIRQ(ADC1_2_IRQn);
