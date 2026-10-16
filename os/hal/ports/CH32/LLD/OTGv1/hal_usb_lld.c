@@ -103,7 +103,8 @@ static const USBEndpointConfig ep0config = {
   DEF_USBD_UEP0_SIZE,
   DEF_USBD_UEP0_SIZE,
   &ep0_state.in,
-  &ep0_state.out
+  &ep0_state.out,
+  2,NULL
 };
 
 /*===========================================================================*/
@@ -161,7 +162,7 @@ static void usb_serve_endpoints(USBDriver *usbp, uint8_t intst)
     break;
   case 3:
     dma_reg   = &(CH32_USBFS_DEVICE->UEP3_DMA);
-    txlen_reg = &(CH32_USBFS_DEVICE->UEP3_TX_LEN);
+    txlen_reg = (uint8_t *)&(CH32_USBFS_DEVICE->UEP3_TX_LEN);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP3_TX_CTRL);
     rxctlr_reg = &(CH32_USBFS_DEVICE->UEP3_RX_CTRL);
     rxlen_reg  = &(CH32_USBFS_DEVICE->RX_LEN);
@@ -873,7 +874,8 @@ void usb_lld_start_in(USBDriver *usbp, usbep_t ep)
   case 3:
     dma_reg    = &(CH32_USBFS_DEVICE->UEP3_DMA);
     txctlr_reg = &(CH32_USBFS_DEVICE->UEP3_TX_CTRL);
-    txlen_reg  = &(CH32_USBFS_DEVICE->UEP3_TX_LEN);
+    /* TODO: it is actully a 16 bit register */
+    txlen_reg  = (uint8_t *)&(CH32_USBFS_DEVICE->UEP3_TX_LEN);
     CH32_USBFS_DEVICE->UEP2_3_MOD |= USBFS_UEP3_TX_EN;
     CH32_USBFS_DEVICE->UEP2_3_MOD &= ~USBFS_UEP3_RX_EN;
     break;

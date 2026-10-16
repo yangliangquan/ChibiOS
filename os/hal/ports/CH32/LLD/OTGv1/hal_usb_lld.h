@@ -186,6 +186,7 @@ typedef struct {
    */
   USBOutEndpointState           *out_state;
 
+  /* ATTENTION: the following fields are actually useless, but we keep them for compatibility */
   /* Buffer mode (upstream-compatible): number of buffers the endpoint is
      capable of using, used only by vendor mode. */
   uint8_t                       buffers;
