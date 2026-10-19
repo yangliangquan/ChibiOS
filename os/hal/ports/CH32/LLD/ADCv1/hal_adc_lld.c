@@ -314,18 +314,32 @@ void adc_lld_start(ADCDriver *adcp) {
     }
 #endif
     dmaStreamSetPeripheral(adcp->dmastp, &adcp->adcr->RDATAR);
+
+#if defined(CH32_ADC_ADCPRE)
+    /* H417-style ADC clock: CFGR0 bit31 (RCC_ADCSRC) selects the mux
+       (0: HCLK-derived ADCH, 1: ADCL/USBHS-PLL) and RCC_ADCPRE bits
+       [15:14] encode the ADCH divider (2/4/6/8). The encoding comes
+       straight from the mcuconf (CH32_ADC_ADCPRE, e.g. the validated
+       RCC_ADCPRE_ADCH_DIV8). PPRE2 (the shared APB2 divider) is left
+       alone here to avoid corrupting unrelated peripherals. */
+    RCC->CFGR0 &= ~RCC_ADCSRC;
+#if CH32_ADC_CLOCKSOURCE_FROM_PLL == TRUE
+    RCC->CFGR0 |= RCC_ADCSRC;
+#endif
+    RCC->CFGR0 = (RCC->CFGR0 & ~RCC_ADCPRE) | CH32_ADC_ADCPRE;
+#else
     RCC->CFGR0 &= ~RCC_ADCSRC;
 #if CH32_ADC_CLOCKSOURCE_FROM_PLL == TRUE
     RCC->CFGR0 |= (1 << 31);
 #endif
     RCC->CFGR0 =
         (RCC->CFGR0 & ~(RCC_PPRE2 | RCC_ADCPRE)) | (CH32_ADC_PRESC << 11) | (CH32_ADC_PRESCALER_HCLKPREDIV_VALUE << 14);
+#endif
 
     adcp->adcr->CTLR2 |= CTLR2_ADON_Set;
     adcp->adcr->CTLR2 |= CTLR2_RSTCAL_Set;
     while (adcp->adcr->CTLR2 & CTLR2_RSTCAL_Set)
         ;
-    adcp->adcr->SAMPTR1 |= (0x7 << 27);
     adcp->adcr->CTLR2 |= CTLR2_CAL_Set;
     while (adcp->adcr->CTLR2 & CTLR2_CAL_Set)
         ;
@@ -366,6 +380,39 @@ void adc_lld_stop(ADCDriver *adcp) {
 }
 
 /**
+ * @brief   Programs the per-channel sample time registers of the H417.
+ * @note    SAMPTR2 holds channels 0..9 and SAMPTR1 channels 10..17, three
+ *          bits each. The conversion group stores the sample time code
+ *          indexed by channel (see AnalogIn adcgrpcfg.adcsampletime[]).
+ *
+ * @param[in] adcp      pointer to the @p ADCDriver object
+ * @param[in] grpp      pointer to the group configuration
+ *
+ * @notapi
+ */
+static void adc_lld_set_sample_times(ADCDriver *adcp, const ADCConversionGroup *grpp) {
+  uint32_t smp1;
+  uint32_t smp2;
+  uint8_t i;
+
+  smp1 = 0U;
+  smp2 = 0U;
+  for (i = 0U; (i < grpp->num_channels) && (i < 16U); i++) {
+    uint8_t chan = (uint8_t)grpp->adcchannels[i];
+    uint8_t smp = (uint8_t)grpp->adcsampletime[chan];
+
+    if (chan >= 10U) {
+      smp1 |= (uint32_t)smp << (3U * (chan - 10U));
+    }
+    else {
+      smp2 |= (uint32_t)smp << (3U * chan);
+    }
+  }
+  adcp->adcr->SAMPTR1 = smp1;
+  adcp->adcr->SAMPTR2 = smp2;
+}
+
+/**
  * @brief   Starts an ADC conversion.
  *
  * @param[in] adcp      pointer to the @p ADCDriver object
@@ -402,6 +449,7 @@ void adc_lld_start_conversion(ADCDriver *adcp) {
                       (grpp->adcchannels[8] << 10) | (grpp->adcchannels[7] << 5) | grpp->adcchannels[6];
   adcp->adcr->RSQR3 = (grpp->adcchannels[5] << 25) | (grpp->adcchannels[4] << 20) | (grpp->adcchannels[3] << 15) |
                       (grpp->adcchannels[2] << 10) | (grpp->adcchannels[1] << 5) | grpp->adcchannels[0];
+  adc_lld_set_sample_times(adcp, grpp);
   adcp->adcr->CTLR2 |= CTLR2_ADON_Set;
   adcp->adcr->CTLR2 |= CTLR2_DMA_Set;
   adcp->adcr->CTLR2 |= CTLR2_EXTTRIG_SWSTART_Set;
