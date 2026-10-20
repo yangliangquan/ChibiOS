@@ -244,20 +244,61 @@ void _pal_lld_setgroupmode(ioportid_t port, ioportmask_t mask, iomode_t mode)
     p->SPEED = 0xffffffff;
 }
 
+/*
+  Read the current mode of a pin in a form that _pal_lld_setgroupmode()
+  understands, so that a save/modify/restore sequence (for example the SPI
+  SCK save/restore in AP_HAL) does not corrupt the pin.
+
+  Unlike the STM32 ports, on CH32 the CNF/MODE nibble stored in CFGLR/CFGHR
+  does not carry the alternate function number, that lives in the separate
+  AFIO mux table. Return the PAL_CH32_* alternate mode with the AF number
+  encoded in bits 8..11 for alternate function pins.
+ */
 iomode_t palReadLineMode(ioline_t line){
     uint8_t pad = PAL_PAD(line);
     GPIO_TypeDef *port = PAL_PORT(line);
+    uint32_t cfg = (pad < 8) ? port->CFGLR : port->CFGHR;
+    uint8_t nib = (cfg >> ((pad & 7) * 4)) & 0xF;
+    uint8_t cnf = (nib >> 2) & 0x3;
+    uint8_t md = nib & 0x3;
 
-    if(pad < 8){
-        uint32_t cfg = port->CFGLR;
-        uint8_t mode = (cfg >> (pad * 4)) & 0xF;
-        return (iomode_t)mode;
+    /* AF number for this port, low and high halves are adjacent. */
+    uint32_t afioreg = ((((uint32_t)port - (uint32_t)IOPORT1)) / 0x400 * 8) +
+                       (uint32_t)&(AFIO->GPIOA_AFLR);
+    uint8_t af = (pad < 8)
+        ? ((*(uint32_t *)afioreg >> (pad * 4)) & 0xF)
+        : ((*(uint32_t *)(afioreg + 4) >> ((pad - 8) * 4)) & 0xF);
+
+    if (md != 0)
+    {
+        /* Output modes, CNF selects push-pull/open-drain and GPIO/AF. */
+        if (cnf == 0)
+        {
+            return PAL_MODE_OUTPUT_PUSHPULL;
+        }
+        if (cnf == 1)
+        {
+            return PAL_MODE_OUTPUT_OPENDRAIN;
+        }
+        if (cnf == 2)
+        {
+            return PAL_CH32_ALTERNATE_PUSHPULL(af);
+        }
+        return PAL_CH32_ALTERNATE_OPENDRAIN(af);
     }
-    else {
-        uint32_t cfg = port->CFGHR;
-        uint8_t mode = (cfg >> ((pad - 8) * 4)) & 0xF;
-        return (iomode_t)mode;
+
+    /* Input modes. */
+    if (cnf == 0)
+    {
+        return PAL_MODE_INPUT_ANALOG;
     }
+    if (cnf == 2 || cnf == 3)
+    {
+        return (port->OUTDR & (1U << pad)) ? PAL_MODE_INPUT_PULLUP
+                                           : PAL_MODE_INPUT_PULLDOWN;
+    }
+    /* Floating input, keep the AF if one is programmed (e.g. SPI MISO). */
+    return (af != 0) ? PAL_CH32_ALTERNATE_INPUT(af) : PAL_MODE_INPUT;
 }
 
 #if PAL_USE_CALLBACKS || PAL_USE_WAIT
