@@ -683,7 +683,7 @@ void dmaStreamFreeI(const ch32_dma_stream_t *dmastp) {
 
   /* Disables the associated IRQ vector if it is no more in use.*/
   if ((dma.isr_mask & dmastp->cmask) == 0U) {
-    NVIC_EnableIRQ(dmastp->vector);
+    NVIC_DisableIRQ(dmastp->vector);
   }
 
   /* Removes the DMA handler.*/
